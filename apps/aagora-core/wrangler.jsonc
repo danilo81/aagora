@@ -1,0 +1,48 @@
+/**
+ * Wrangler configuration for aagora-core Cloudflare Worker.
+ * For more details: https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "aagora-core",
+	"account_id": "b91931af73699f48730a2b832c37c667",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-04-30",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".open-next/assets"
+	},
+	"images": {
+		// Enable image optimization
+		// see https://opennext.js.org/cloudflare/howtos/image
+		"binding": "IMAGES"
+	},
+	"services": [
+		{
+			// Self-reference para caching de OpenNext — el service name debe coincidir con "name"
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "aagora-core"
+		}
+	],
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true
+	/**
+	 * Smart Placement (opcional)
+	 * https://developers.cloudflare.com/workers/configuration/smart-placement/
+	 */
+	// "placement": { "mode": "smart" }
+	/**
+	 * Variables de entorno NO sensibles (las sensibles van como Secrets):
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	// "vars": {
+	//   "NEXT_PUBLIC_CLERK_SIGN_IN_URL": "/login",
+	//   "NEXT_PUBLIC_CLERK_SIGN_UP_URL": "/register"
+	// }
+}

@@ -1,0 +1,862 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
+"use client";
+
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { CreateProjectData, Project } from '../../types/types';
+import { Card, CardContent } from '@workspace/ui/components/card';
+import { Button } from '@workspace/ui/components/button';
+import { Plus, LayoutGrid, List, Search, MoreVertical, Loader2, Building2, ChevronRight, MapPin, Trash2, ArrowRight, UserPlus, Send, X, Upload, ArrowLeftRight, Mail } from 'lucide-react';
+import { Input } from '@workspace/ui/components/input';
+import { Textarea } from '@workspace/ui/components/textarea';
+import { Label } from '@workspace/ui/components/label';
+import { Badge } from '@workspace/ui/components/badge';
+import { Tabs, TabsList, TabsTrigger } from '@workspace/ui/components/tabs';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@workspace/ui/components/table';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@workspace/ui/components/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
+} from '@workspace/ui/components/dialog';
+import Link from 'next/link';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@workspace/ui/components/dropdown-menu';
+import { useToast } from '../../hooks/use-toast';
+import { createProject, deleteProject, getProjects, inviteCollaborator, leaveProject, transferProject } from '@/actions';
+import { useAuth } from '../../hooks/use-auth';
+import { cn } from '../../lib/utils';
+
+const CONSTRUCTION_URL = process.env.NEXT_PUBLIC_CONSTRUCTION_URL ?? 'http://localhost:3003';
+
+export default function ProjectsPage() {
+    return (
+        <Suspense fallback={
+            <div className="container mx-auto p-8 flex items-center justify-center h-[50vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px]">Sincronizando...</span>
+            </div>
+        }>
+            <ProjectsPageContent />
+        </Suspense>
+    );
+}
+
+function ProjectsPageContent() {
+    const { user } = useAuth();
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+    const [view, setView] = useState<'grid' | 'list'>('grid');
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+    const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [selectedProjectForInvite, setSelectedProjectForInvite] = useState<Project | null>(null);
+    const [selectedProjectForTransfer, setSelectedProjectForTransfer] = useState<Project | null>(null);
+    const [inviteEmail, setInviteEmail] = useState('');
+    const [transferEmail, setTransferEmail] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams?.get('access') === 'denied') {
+            toast({ variant: 'destructive', title: 'Acceso Denegado', description: 'No tienes permiso para acceder a ese proyecto.' });
+        }
+    }, [searchParams, toast]);
+
+    // Form State
+    const [formData, setFormData] = useState({
+        title: '',
+        description: '',
+        client: '',
+        location: '',
+        projectType: 'residencial',
+        area: '',
+        status: 'activo' as 'activo' | 'espera' | 'finalizado' | 'construccion',
+        imageUrl: '/project-img.png'
+    });
+
+    const fetchProjects = async () => {
+        setLoading(true);
+        try {
+            const userProjects = await getProjects();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setProjects(userProjects as any);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        setIsMounted(true);
+        fetchProjects();
+    }, []);
+
+    const getProjectImageUrl = (url: string | null) => {
+        if (!url || url === '/project-img.png') return '/project-img.png';
+        if (url.startsWith('http')) return url;
+        return url;
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { id, value } = e.target;
+        setFormData(prev => ({ ...prev, [id]: value }));
+    };
+
+    const handleSelectChange = (field: string, value: string) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
+            const dataToSubmit: CreateProjectData = {
+                title: formData.title,
+                description: formData.description,
+                client: formData.client,
+                location: formData.location,
+                projectType: formData.projectType,
+                area: parseFloat(formData.area) || 0,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                status: formData.status as any,
+                imageUrl: formData.imageUrl || '/project-img.png'
+            };
+
+            const result = await createProject(dataToSubmit);
+
+            if (result && 'error' in result) {
+                toast({
+                    variant: "destructive",
+                    title: "Fallo en la creación",
+                    description: String(result.error),
+                });
+            } else if (result.success && result.project) {
+                await fetchProjects();
+                setIsCreateModalOpen(false);
+                setFormData({
+                    title: '',
+                    description: '',
+                    client: '',
+                    location: '',
+                    projectType: 'residencial',
+                    area: '',
+                    status: 'activo',
+                    imageUrl: '/project-img.png'
+                });
+                toast({
+                    title: "Proyecto creado",
+                    description: "El nuevo proyecto ha sido registrado exitosamente.",
+                });
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error inesperado",
+                description: "Ocurrió un fallo al intentar registrar el proyecto.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleInviteSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedProjectForInvite || !inviteEmail) return;
+        setIsSubmitting(true);
+
+        try {
+            const result = await inviteCollaborator(selectedProjectForInvite.id, inviteEmail);
+            if (result.success) {
+                toast({
+                    title: "Invitación enviada",
+                    description: `Se ha enviado una solicitud de colaboración a ${inviteEmail}.`,
+                });
+                setIsInviteModalOpen(false);
+                setInviteEmail('');
+            } else {
+                throw new Error(result.error);
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error al invitar",
+                description: "Ocurrió un error inesperado al procesar la solicitud.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleTransferSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedProjectForTransfer || !transferEmail) return;
+        if (!confirm(`¿Estás seguro de que deseas transferir la propiedad del proyecto "${selectedProjectForTransfer.title}" a ${transferEmail}? Una vez transferido, perderás los privilegios de autor.`)) return;
+        setIsSubmitting(true);
+
+        try {
+            const result = await transferProject(selectedProjectForTransfer.id, transferEmail);
+            if (result.success) {
+                toast({
+                    title: "Proyecto Transferido",
+                    description: `La propiedad del proyecto ha sido transferida exitosamente a ${transferEmail}.`,
+                });
+                setIsTransferModalOpen(false);
+                setTransferEmail('');
+                await fetchProjects();
+            } else {
+                throw new Error(result.error);
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error al transferir",
+                description: "Ocurrió un error inesperado al procesar la solicitud.",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('¿Deseas eliminar este proyecto permanentemente?')) return;
+
+        const originalProjects = [...projects];
+        setProjects(prev => prev.filter(p => p.id !== id));
+
+        try {
+            const result = await deleteProject(id);
+
+            if (result && 'error' in result) {
+                setProjects(originalProjects);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: String(result.error),
+                });
+            } else {
+                toast({ title: "Proyecto eliminado", variant: "destructive" });
+            }
+        } catch (error) {
+            setProjects(originalProjects);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No se pudo eliminar el proyecto.",
+            });
+        }
+    };
+
+    const handleLeave = async (id: string) => {
+        if (!confirm('¿Estás seguro que deseas abandonar este proyecto? Dejarás de tener acceso a él.')) return;
+
+        const originalProjects = [...projects];
+        setProjects(prev => prev.filter(p => p.id !== id));
+
+        try {
+            const result = await leaveProject(id);
+
+            if (result && 'error' in result) {
+                setProjects(originalProjects);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: String(result.error),
+                });
+            } else {
+                toast({ title: "Has abandonado el proyecto exitosamente" });
+            }
+        } catch (error) {
+            setProjects(originalProjects);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No se pudo abandonar el proyecto.",
+            });
+        }
+    };
+
+    if (!isMounted) return null;
+
+    if (loading && projects.length === 0) {
+        return (
+            <div className="container mx-auto p-8 flex items-center justify-center h-[50vh]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px]">Sincronizando...</span>
+            </div>
+        );
+    }
+
+    const ProjectListView = () => (
+        <Card className="bg-card border-accent/20 overflow-hidden p-0  ">
+            <CardContent className="p-0 ">
+                <Table>
+                    <TableHeader className="bg-card">
+                        <TableRow className="border-accent/20 hover:bg-transparent">
+                            <TableHead className="py-4 px-6 text-[12px] font-black uppercase tracking-widest text-muted-foreground">Proyecto / Obra</TableHead>
+                            <TableHead className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Cliente</TableHead>
+                            <TableHead className="text-[12px] font-black uppercase tracking-widest text-muted-foreground">Ubicación</TableHead>
+                            <TableHead className="text-[12px] font-black uppercase tracking-widest text-muted-foreground text-right">Área (m²)</TableHead>
+                            <TableHead className="text-[12px] font-black uppercase tracking-widest text-muted-foreground text-center">Estado</TableHead>
+                            <TableHead className="text-right px-6 text-[12px] font-black uppercase tracking-widest text-muted-foreground">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody className="bg-card">
+                        {projects.map((project) => (
+                            <TableRow key={project.id} className="border-accent/20 hover:bg-muted/40 transition-colors group">
+                                <TableCell className="py-4 px-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-10 w-10 rounded-lg overflow-hidden border border-accent/20 shrink-0 bg-accent ">
+                                            <img src={getProjectImageUrl(project.imageUrl)} alt="" className="w-full h-full object-cover" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <div className="flex items-center gap-2">
+                                                <Link href={`${CONSTRUCTION_URL}/project/${project.id}`} className="text-xs font-black text-primary uppercase group-hover:text-primary transition-colors line-clamp-1">
+                                                    {project.title}
+                                                </Link>
+                                                {project.authorId !== user?.id && (
+                                                    <Badge variant="outline" className="text-[8px] font-black uppercase border-blue-500/20 text-blue-500 bg-blue-500/5 px-1.5 h-4">
+                                                        Colaborador
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <span className="text-[12px] text-muted-foreground uppercase font-bold tracking-tighter line-clamp-1 opacity-60">
+                                                {project.projectType}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-[12px] font-bold text-muted-foreground uppercase">{project.client || 'N/A'}</TableCell>
+                                <TableCell className="text-[12px] font-bold text-muted-foreground uppercase">
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin className="h-4 w-4 text-primary" />
+                                        {project.location || 'N/A'}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-[12px] font-bold text-primary">
+                                    {project.area ? `${project.area.toLocaleString()} m²` : '-'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                    <Badge variant="outline" className={cn("text-[12px] font-black uppercase border-none px-2",
+                                        project.status === 'activo' || project.status === 'construccion' ? 'bg-primary/10 text-primary' :
+                                            project.status === 'finalizado' ? 'bg-emerald-500/10 text-emerald-500' :
+                                                'bg-amber-500/10 text-amber-500'
+                                    )}>
+                                        {project.status}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right px-6">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/40 bg-transparent cursor-pointer">
+                                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-card border-accent/20 text-primary  p-1.5 rounded-xl">
+                                            <DropdownMenuItem asChild className="text-[10px] font-black uppercase tracking-widest cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg">
+                                                <Link href={`${CONSTRUCTION_URL}/project/${project.id}`}>
+                                                    <ArrowRight className="h-3.5 w-3.5 text-primary" />Gestionar
+                                                </Link>
+                                            </DropdownMenuItem>
+                                            {project.authorId === user?.id && (
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedProjectForInvite(project);
+                                                        setIsInviteModalOpen(true);
+                                                    }}
+                                                    className="text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg"
+                                                >
+                                                    <UserPlus className="h-3.5 w-3.5 text-primary" /> Invitar Colaborador
+                                                </DropdownMenuItem>
+                                            )}
+                                            {project.authorId === user?.id && (
+                                                <DropdownMenuItem
+                                                    onClick={() => {
+                                                        setSelectedProjectForTransfer(project);
+                                                        setIsTransferModalOpen(true);
+                                                    }}
+                                                    className="text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg"
+                                                >
+                                                    <ArrowLeftRight className="h-3.5 w-3.5 text-primary" /> Transferir Proyecto
+                                                </DropdownMenuItem>
+                                            )}
+                                            {project.authorId === user?.id ? (
+                                                <DropdownMenuItem
+                                                    className="text-[10px] font-black uppercase tracking-widest text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer rounded-lg mt-1"
+                                                    onClick={() => handleDelete(project.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 text-destructive" /> Eliminar Proyecto
+                                                </DropdownMenuItem>
+                                            ) : (
+                                                <DropdownMenuItem
+                                                    className="text-[10px] font-black uppercase tracking-widest text-amber-500 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer rounded-lg mt-1"
+                                                    onClick={() => handleLeave(project.id)}
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5 text-amber-500" /> Abandonar Proyecto
+                                                </DropdownMenuItem>
+                                            )}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+
+    const ProjectGridView = () => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {projects.map((project) => (
+                <Card key={project.id} className="group bg-card overflow-hidden opacity-99 border-accent/20 hover:border-primary/50 transition-all flex flex-col p-0 ">
+                    <div className="relative aspect-video overflow-hidden border-b border-accent/20">
+                        <Link href={`${CONSTRUCTION_URL}/project/${project.id}`}>
+                            <img
+                                src={getProjectImageUrl(project.imageUrl)}
+                                alt={project.title}
+                                className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110 cursor-pointer"
+                            />
+                        </Link>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-black/40 border border-white/10 backdrop-blur-md">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-card border-accent/20 text-primary  p-1.5 rounded-xl">
+                                    <DropdownMenuItem asChild className="text-[10px] font-black uppercase tracking-widest cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg">
+                                        <Link href={`${CONSTRUCTION_URL}/project/${project.id}`}> <ArrowRight className="h-3.5 w-3.5 text-primary" /> Gestionar</Link>
+                                    </DropdownMenuItem>
+                                    {project.authorId === user?.id && (
+                                        <DropdownMenuItem
+                                            onClick={() => {
+                                                setSelectedProjectForInvite(project);
+                                                setIsInviteModalOpen(true);
+                                            }}
+                                            className="text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg"
+                                        >
+                                            <UserPlus className="h-3.5 w-3.5 text-primary" /> Invitar Colaborador
+                                        </DropdownMenuItem>
+                                    )}
+                                    {project.authorId === user?.id && (
+                                        <DropdownMenuItem
+                                            onClick={() => {
+                                                setSelectedProjectForTransfer(project);
+                                                setIsTransferModalOpen(true);
+                                            }}
+                                            className="text-[10px] font-black uppercase tracking-widest cursor-pointer rounded-lg"
+                                        >
+                                            <ArrowLeftRight className="h-3.5 w-3.5 text-amber-500" /> Transferir Proyecto
+                                        </DropdownMenuItem>
+                                    )}
+                                    {project.authorId === user?.id ? (
+                                        <DropdownMenuItem
+                                            className="text-[10px] font-black uppercase tracking-widest text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer rounded-lg mt-1"
+                                            onClick={() => handleDelete(project.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 text-destructive" /> Eliminar Proyecto
+                                        </DropdownMenuItem>
+                                    ) : (
+                                        <DropdownMenuItem
+                                            className="text-[10px] font-black uppercase tracking-widest text-amber-500 focus:bg-amber-500/10 focus:text-amber-500 cursor-pointer rounded-lg mt-1"
+                                            onClick={() => handleLeave(project.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5 text-amber-500" /> Abandonar Proyecto
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        {project.authorId !== user?.id && (
+                            <div className="absolute top-2 left-2">
+                                <Badge variant="secondary" className="bg-blue-500/80 text-white border-none text-[10px] font-black uppercase backdrop-blur-md shadow-lg">
+                                    Colaborador
+                                </Badge>
+                            </div>
+                        )}
+                    </div>
+
+                    <CardContent className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-start gap-2">
+                                <Link href={`${CONSTRUCTION_URL}/project/${project.id}`} className="flex-1">
+                                    <h3 className="text-[20px] font-black uppercase tracking-tight text-primary group-hover:text-primary transition-colors line-clamp-1">
+                                        {project.title}
+                                    </h3>
+                                </Link>
+                                <Badge variant="outline" className={cn("text-[10px] font-black uppercase h-4 px-1.5 border-none",
+                                    project.status === 'activo' || project.status === 'construccion' ? 'bg-primary/10 text-primary' :
+                                        project.status === 'finalizado' ? 'bg-emerald-500/10 text-emerald-500' :
+                                            'bg-amber-500/10 text-amber-500'
+                                )}>
+                                    {project.status}
+                                </Badge>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground line-clamp-1 uppercase font-bold opacity-60">
+                                {project.description}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Cliente</span>
+                                <span className="text-[16px] font-bold text-primary uppercase truncate max-w-[120px]">{project.client || 'N/A'}</span>
+                            </div>
+                            <Link href={`${CONSTRUCTION_URL}/project/${project.id}`}>
+                                <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase tracking-widest text-primary hover:bg-primary/10 hover:text-primary group/btn cursor-pointer">
+                                    Detalles <ChevronRight className="ml-1 h-3 w-3 transition-transform group-hover/btn:translate-x-0.5" />
+                                </Button>
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+
+    return (
+        <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500 ">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card w-fit">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline flex items-center gap-3 text-primary">
+                        <Building2 className="h-8 w-8 text-primary" /> Mis Proyectos
+                    </h1>
+                    <p className="text-muted-foreground mt-1">Gestión y supervisión de proyectos</p>
+                </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card p-4 rounded-2xl border border-accent/20 backdrop-blur-xl">
+                <div className="relative w-full sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Buscar Proyectos..." className="pl-10 h-11 bg-card border-accent/20 text-[10px] font-medium tracking-widest" />
+                </div>
+
+                <div className="flex items-center gap-4 flex-wrap">
+
+                    <Tabs value={view} onValueChange={(v: string) => setView(v as "grid" | "list")} className="w-auto">
+                        <TabsList className="bg-accent/20 border border-accent/20 p-1 rounded-xl h-11">
+                            <TabsTrigger value="grid" className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest px-6 data-[state=active]:bg-card h-full">
+                                <LayoutGrid className="h-3.5 w-3.5" /> Cuadrícula
+                            </TabsTrigger>
+                            <TabsTrigger value="list" className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest px-6 h-full data-[state=active]:bg-card">
+                                <List className="h-3.5 w-3.5" /> Lista
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+
+                    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary hover:bg-primary/40 text-background font-black text-[10px] uppercase tracking-widest px-8 h-11 rounded-xl cursor-pointer">
+                                <Plus className="mr-2 h-4 w-4" /> Nuevo Proyecto
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="w-[95vw] lg:max-w-[600px] bg-card border-accent/20 text-primary overflow-y-auto max-h-[90vh] p-0 shadow-2xl">
+                            <form onSubmit={handleSubmit} className="flex flex-col">
+                                <DialogHeader className="p-6 border-b border-accent/20">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-primary/20 rounded-lg border border-primary/20">
+                                            <Building2 className="h-6 w-6 text-primary" />
+                                        </div>
+                                        <div>
+                                            <DialogTitle className="text-xl font-bold uppercase tracking-tight">Nuevo Proyecto</DialogTitle>
+                                            <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Configuración inicial del activo de obra</DialogDescription>
+                                        </div>
+                                    </div>
+                                </DialogHeader>
+                                <div className="p-6 space-y-5">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="title" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del Proyecto</Label>
+                                        <Input id="title" value={formData.title} onChange={handleInputChange} className="h-11 bg-card border-accent/20 text-sm font-bold uppercase" placeholder="Ej: Edificio Los Pinos" required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Corta</Label>
+                                        <Textarea id="description" value={formData.description} onChange={handleInputChange} placeholder="Breve descripción..." className="min-h-[80px] bg-card border-accent/20 text-xs uppercase font-bold" required />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="client" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cliente</Label>
+                                            <Input id="client" value={formData.client} onChange={handleInputChange} className="h-11 bg-card border-accent/20 text-xs uppercase font-bold" required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="location" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ubicación</Label>
+                                            <Input id="location" value={formData.location} onChange={handleInputChange} className="h-11 bg-card border-accent/20 text-xs uppercase font-bold" required />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="projectType" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground w-full">Tipo</Label>
+                                            <Select value={formData.projectType} onValueChange={(val) => handleSelectChange('projectType', val)}>
+                                                <SelectTrigger className="bg-card border-accent/20 h-11 text-[10px] font-black uppercase w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-accent/20 text-primary">
+                                                    <SelectItem value="residencial" className="text-[10px] font-black uppercase">Residencial</SelectItem>
+                                                    <SelectItem value="comercial" className="text-[10px] font-black uppercase">Comercial y Oficinas</SelectItem>
+                                                    <SelectItem value="industrial" className="text-[10px] font-black uppercase">Industrial</SelectItem>
+                                                    <SelectItem value="infraestructura" className="text-[10px] font-black uppercase">Infraestructura</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="area" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Área (m²)</Label>
+                                            <Input id="area" type="number" step="0.01" value={formData.area} onChange={handleInputChange} className="h-11 bg-card border-accent/20 font-mono text-xs font-bold" required />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="status" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estado Inicial</Label>
+                                        <Select value={formData.status} onValueChange={(val) => handleSelectChange('status', val)}>
+                                            <SelectTrigger className="bg-card border-accent/20 h-11 text-[10px] font-black uppercase w-full">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-card border-accent/20 text-primary">
+                                                <SelectItem value="activo" className="text-[10px] font-black uppercase text-primary">ACTIVO</SelectItem>
+                                                <SelectItem value="construccion" className="text-[10px] font-black uppercase text-blue-400">EN CONSTRUCCIÓN</SelectItem>
+                                                <SelectItem value="espera" className="text-[10px] font-black uppercase text-amber-400">EN ESPERA</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Imagen del Proyecto (Opcional)</Label>
+                                        <div className="flex flex-col gap-4">
+                                            {formData.imageUrl && formData.imageUrl !== '/project-img.png' && (
+                                                <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-accent/20">
+                                                    <img src={getProjectImageUrl(formData.imageUrl)} className="w-full h-full object-cover" />
+                                                    <Button
+                                                        type="button"
+                                                        variant="destructive"
+                                                        size="icon"
+                                                        className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                                                        onClick={() => setFormData(prev => ({ ...prev, imageUrl: '/project-img.png' }))}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
+                                            <div
+                                                className="border-2 border-dashed border-accent/20 rounded-xl p-8 flex flex-col items-center justify-center gap-3 hover:border-primary/50 transition-colors cursor-pointer bg-accent/20"
+                                                onClick={() => document.getElementById('project-image-upload')?.click()}
+                                            >
+                                                <Upload className="h-8 w-8 text-muted-foreground" />
+                                                <div className="text-center">
+                                                    <p className="text-[10px] font-black uppercase">Subir Foto de Portada</p>
+                                                    <p className="text-[9px] text-muted-foreground uppercase mt-1">Formatos: JPG, PNG o WEBP (Máx. 5MB)</p>
+                                                </div>
+                                                <input
+                                                    id="project-image-upload"
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+
+                                                        setIsSubmitting(true);
+                                                        try {
+                                                            const response = await fetch('/api/r2/upload', {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({
+                                                                    filename: file.name,
+                                                                    contentType: file.type,
+                                                                    size: file.size,
+                                                                    isPublic: true
+                                                                })
+                                                            });
+
+                                                            const { presignedUrl, publicUrl } = await response.json();
+
+                                                            await fetch(presignedUrl, {
+                                                                method: 'PUT',
+                                                                body: file,
+                                                                headers: { 'Content-Type': file.type }
+                                                            });
+
+                                                            setFormData(prev => ({ ...prev, imageUrl: publicUrl }));
+                                                            toast({ title: "Imagen subida", description: "La portada del proyecto ha sido actualizada." });
+                                                        } catch (error) {
+                                                            toast({ title: "Error", description: "No se pudo subir la imagen.", variant: "destructive" });
+                                                        } finally {
+                                                            setIsSubmitting(false);
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <DialogFooter className="p-6 border-t border-accent/20 gap-3 items-center ">
+                                    <Button type="button" variant="ghost" onClick={() => setIsCreateModalOpen(false)} disabled={isSubmitting} className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary cursor-pointer">
+                                        Cancelar
+                                    </Button>
+                                    <Button type="submit" className="bg-primary hover:bg-primary/40 text-background font-black text-[10px] uppercase tracking-widest px-12 h-11 cursor-pointer" disabled={isSubmitting}>
+                                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Registrar Proyecto"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            {/* Content Area */}
+            {loading ? (
+                <div className="py-40 flex flex-col items-center justify-center gap-4 opacity-30">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                    <p className="text-[10px] font-black uppercase tracking-widest">Sincronizando Portafolio...</p>
+                </div>
+            ) : projects.length > 0 ? (
+                view === 'grid' ? <ProjectGridView /> : <ProjectListView />
+            ) : (
+                <div className="py-32 flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-20">
+                    <Building2 className="h-16 w-16" />
+                    <div className="text-center">
+                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">No hay proyectos registrados en el portafolio operativo.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Invitación */}
+            <Dialog open={isInviteModalOpen} onOpenChange={setIsInviteModalOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-card border-accent/20 text-primary p-0 overflow-hidden shadow-2xl">
+                    <form onSubmit={handleInviteSubmit}>
+                        <DialogHeader className="p-6 bg-card border-b border-accent/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-500/20 rounded-lg">
+                                    <UserPlus className="h-6 w-6 text-blue-400" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl font-bold uppercase tracking-tight">Invitar Colaborador</DialogTitle>
+                                    <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">
+                                        Otorgar acceso de lectura y edición al proyecto
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                        <div className="p-6 space-y-6">
+                            <div className="bg-card p-4 rounded-xl border border-accent/20">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Proyecto Seleccionado</p>
+                                <p className="text-sm font-bold text-primary uppercase">{selectedProjectForInvite?.title}</p>
+                            </div>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                    <Mail className="h-3.5 w-3.5" /> Correo del Usuario
+                                </Label>
+                                <Input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    placeholder="ejemplo@correo.com"
+                                    required
+                                    className="h-12 bg-card border-accent/20 font-mono text-sm"
+                                />
+                            </div>
+                            <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                                <p className="text-[9px] text-blue-400 font-bold leading-relaxed uppercase">
+                                    El usuario invitado podrá ver y modificar cómputos, bitácoras y registros financieros de esta terminal.
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter className="p-6 border-t border-accent/20 bg-card">
+                            <Button type="button" variant="ghost" onClick={() => setIsInviteModalOpen(false)} className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting || !inviteEmail} className="bg-blue-500 hover:bg-blue-600 text-primary font-black text-[10px] uppercase h-11 px-8 tracking-widest cursor-pointer">
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                                Enviar Invitación
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+                <DialogContent className="sm:max-w-[425px] bg-card border-accent/20 text-primary p-0 overflow-hidden shadow-2xl">
+                    <form onSubmit={handleTransferSubmit}>
+                        <DialogHeader className="p-6 bg-card border-b border-accent/20">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-amber-500/20 rounded-lg">
+                                    <ArrowLeftRight className="h-6 w-6 text-amber-500" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-xl font-bold uppercase tracking-tight">Transferir Propiedad</DialogTitle>
+                                    <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">
+                                        Cambiar el autor principal del proyecto
+                                    </DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                        <div className="p-6 space-y-6">
+                            <div className="bg-card p-4 rounded-xl border border-accent/20">
+                                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Proyecto a Transferir</p>
+                                <p className="text-sm font-bold text-primary uppercase">{selectedProjectForTransfer?.title}</p>
+                            </div>
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                    <Mail className="h-3.5 w-3.5" /> Correo del Nuevo Autor
+                                </Label>
+                                <Input
+                                    type="email"
+                                    value={transferEmail}
+                                    onChange={(e) => setTransferEmail(e.target.value)}
+                                    placeholder="correo@nuevoautor.com"
+                                    required
+                                    className="h-12 bg-card border-accent/20 font-mono text-sm"
+                                />
+                            </div>
+                            <div className="p-4 bg-amber-500/5 rounded-xl border border-amber-500/10">
+                                <p className="text-[9px] text-amber-500 font-bold leading-relaxed uppercase">
+                                    ¡ADVERTENCIA! Al transferir el proyecto, dejarás de ser el propietario. Solo el nuevo autor podrá gestionar colaboradores, transferir o eliminar este proyecto.
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter className="p-6 border-t border-accent/20 bg-card">
+                            <Button type="button" variant="ghost" onClick={() => setIsTransferModalOpen(false)} className="text-[10px] font-black uppercase tracking-widest cursor-pointer">
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting || !transferEmail} className="bg-amber-500 hover:bg-amber-600 text-primary font-black text-[10px] uppercase h-11 px-8 tracking-widest cursor-pointer">
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowLeftRight className="mr-2 h-4 w-4" />}
+                                Confirmar Transferencia
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/auth",
+  "type": "module",
+  "exports": {
+    "./server": {
+      "types": "./src/server.d.ts",
+      "default": "./src/server.js"
+    },
+    "./client": {
+      "types": "./src/client.d.ts",
+      "default": "./src/client.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "better-auth": "^1.6.2",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "typescript": "^5.9.3"
+  }
+}

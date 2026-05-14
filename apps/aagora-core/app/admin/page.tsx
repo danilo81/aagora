@@ -1,0 +1,666 @@
+"use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-img-element */
+
+import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '../../hooks/use-auth';
+import { Card, CardContent } from '@workspace/ui/components/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@workspace/ui/components/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@workspace/ui/components/select';
+import { InferSelectModel } from 'drizzle-orm';
+import { user } from '@workspace/db';
+type User = InferSelectModel<typeof user>;
+import { UserRole } from '../../types/types';
+import { useToast } from '../../hooks/use-toast';
+import { ShieldCheck, Loader2, UserPlus, MoreHorizontal, Search, ExternalLink, Mail, User as UserIcon, Briefcase, Hammer, Users, Globe, Smartphone, Bell, Send, CheckCircle2, AlertTriangle, Info, X as XIcon } from 'lucide-react';
+import { getUsers, updateUserRole, createUser, getUserProjects, sendNotification } from '@/actions';
+import type { NotificationType } from '@/actions/admin/sendNotification';
+import { Textarea } from '@workspace/ui/components/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@workspace/ui/components/dialog';
+import { Button } from '@workspace/ui/components/button';
+import { Input } from '@workspace/ui/components/input';
+import { Label } from '@workspace/ui/components/label';
+import { Badge } from '@workspace/ui/components/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@workspace/ui/components/dropdown-menu';
+import Link from 'next/link';
+import { Separator } from '@workspace/ui/components/separator';
+import { ScrollArea } from '@workspace/ui/components/scroll-area';
+
+export default function AdminPage() {
+    const { loading: authLoading } = useAuth();
+    const { toast } = useToast();
+    const [users, setUsers] = useState<Omit<User, 'password'>[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<Omit<User, 'password'> | null>(null);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [newUser, setNewUser] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'viewer' as UserRole,
+        storageLimit: '1GB',
+        telefono: '',
+        cargo: '',
+    });
+
+    const [isNotifDialogOpen, setIsNotifDialogOpen] = useState(false);
+    const [isSendingNotif, setIsSendingNotif] = useState(false);
+    const [notifForm, setNotifForm] = useState({
+        targetUserId: 'all' as string,
+        title: '',
+        message: '',
+        type: 'info' as NotificationType,
+    });
+
+    const handleSendNotification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSendingNotif(true);
+        const result = await sendNotification(notifForm);
+        if (result.success) {
+            toast({
+                title: 'Notificación enviada',
+                description: result.count === 1
+                    ? 'La notificación fue entregada al usuario.'
+                    : `Se enviaron ${result.count} notificaciones a todos los usuarios.`,
+            });
+            setNotifForm({ targetUserId: 'all', title: '', message: '', type: 'info' });
+            setIsNotifDialogOpen(false);
+        } else {
+            toast({ title: 'Error', description: result.error, variant: 'destructive' });
+        }
+        setIsSendingNotif(false);
+    };
+
+
+
+    useEffect(() => {
+        getUsers()
+            .then(data => {
+                setUsers(data);
+            })
+            .catch(err => {
+                console.error(err);
+                toast({
+                    title: "Error",
+                    description: "No se pudieron cargar los usuarios.",
+                    variant: "destructive"
+                });
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
+            if (selectedUser && isModalOpen) {
+                setIsLoadingProjects(true);
+                setProjects([]);
+                try {
+                    const data = await getUserProjects(selectedUser.id);
+                    setProjects(data);
+                } catch (err) {
+                    console.error(err);
+                    toast({
+                        title: "Error",
+                        description: "No se pudieron cargar los proyectos del usuario.",
+                        variant: "destructive"
+                    });
+                } finally {
+                    setIsLoadingProjects(false);
+                }
+            }
+        };
+        fetchProjects();
+    }, [selectedUser, isModalOpen, toast]);
+
+    const handleRoleChange = async (userId: string, newRole: UserRole) => {
+        const originalUsers = [...users];
+        setUsers(currentUsers => currentUsers.map(u => u.id === userId ? { ...u, role: newRole } : u));
+
+        const updatedUser = await updateUserRole(userId, newRole);
+
+        if (updatedUser) {
+            toast({
+                title: "Rol actualizado",
+                description: `El rol del usuario se ha actualizado a ${newRole} con éxito.`,
+            });
+        } else {
+            setUsers(originalUsers);
+            toast({
+                title: "Error",
+                description: "Error al actualizar el rol del usuario.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newUser.password) {
+            toast({ title: "La contraseña es obligatoria", variant: "destructive" });
+            return;
+        }
+        setIsSubmitting(true);
+        const result = await createUser(newUser);
+        setIsSubmitting(false);
+
+        if (result && 'error' in result) {
+            toast({ title: "Error al crear el usuario", description: (result as any).error, variant: "destructive" });
+        } else {
+            const newUserData = result as Omit<User, 'password'>;
+            toast({ title: "Usuario creado", description: `El usuario ${newUserData.name} ha sido creado.` });
+            setUsers(prevUsers => [newUserData, ...prevUsers]);
+            setIsCreateDialogOpen(false);
+            setNewUser({ name: '', email: '', password: '', role: 'viewer', storageLimit: '1GB', telefono: '', cargo: '' });
+        }
+    };
+
+    const filteredUsers = users.filter(u =>
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const userProjectsByRole = useMemo(() => {
+        if (!selectedUser) return { own: [], collab: [] };
+        return {
+            own: projects.filter(p => p.authorId === selectedUser.id),
+            collab: projects.filter(p => p.authorId !== selectedUser.id)
+        };
+    }, [projects, selectedUser]);
+
+    if (authLoading || loading) return (
+        <div className="p-8 flex items-center justify-center gap-2 text-muted-foreground h-[50vh]">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Sincronizando Usuarios...</span>
+        </div>
+    );
+
+    return (
+        <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className='bg-card w-fit'>
+                    <h1 className="text-3xl font-bold font-headline flex items-center gap-3">
+                        <ShieldCheck className="h-8 w-8 text-primary" /> Panel de Administración
+                    </h1>
+                    <p className="text-muted-foreground mt-1">Administra los permisos y niveles de acceso para todos los usuarios.</p>
+                </div>
+            </div>
+
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between bg-card p-4 rounded-xl border border-accent/20 ">
+                <div className="relative w-full lg:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar por nombre o correo..."
+                        className="pl-10 bg-card border-accent/20"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <div className="flex items-center gap-2">
+                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary hover:bg-primary/40 text-background font-black text-[10px] uppercase tracking-widest px-8 h-11 ">
+                                <UserPlus className="mr-2 h-4 w-4" /> Crear usuario
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-card border-popover text-primary p-0 overflow-hidden shadow-2xl">
+                            <form onSubmit={handleCreateUser} className="flex flex-col">
+                                <DialogHeader className="p-6 bg-card border-b ">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-primary/20 rounded-lg border border-primary/20">
+                                            <UserPlus className="h-6 w-6 text-primary" />
+                                        </div>
+                                        <div>
+                                            <DialogTitle className="text-xl font-bold uppercase tracking-tight">Nuevo Usuario</DialogTitle>
+                                            <DialogDescription className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mt-1">Registrar personal en la plataforma</DialogDescription>
+                                        </div>
+                                    </div>
+                                </DialogHeader>
+                                <div className="p-6 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Nombre completo</Label>
+                                        <Input value={newUser.name} onChange={(e) => setNewUser(p => ({ ...p, name: e.target.value }))} className="h-11 text-sm font-bold uppercase" placeholder="Ej: Juan Pérez" required />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Correo electrónico</Label>
+                                        <Input type="email" value={newUser.email} onChange={(e) => setNewUser(p => ({ ...p, email: e.target.value }))} className="h-11 text-sm" placeholder="usuario@ejemplo.com" required />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Contraseña</Label>
+                                            <Input type="password" value={newUser.password} onChange={(e) => setNewUser(p => ({ ...p, password: e.target.value }))} className="h-11" required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Rol</Label>
+                                            <Select value={newUser.role} onValueChange={(val: UserRole) => setNewUser(p => ({ ...p, role: val }))}>
+                                                <SelectTrigger className="w-full h-11 text-[10px] font-black uppercase">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-secondary text-primary">
+                                                    <SelectItem value="admin" className="text-[10px] font-bold uppercase">Administrador</SelectItem>
+                                                    <SelectItem value="editor" className="text-[10px] font-bold uppercase">Editor</SelectItem>
+                                                    <SelectItem value="viewer" className="text-[10px] font-black uppercase">Lector</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase text-muted-foreground">Límite de Almacenamiento (Cloud)</Label>
+                                        <div className="relative">
+                                            <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
+                                            <Input
+                                                value={newUser.storageLimit}
+                                                onChange={(e) => setNewUser(p => ({ ...p, storageLimit: e.target.value }))}
+                                                className="h-11 pl-10 text-sm font-bold uppercase"
+                                                placeholder="Ej: 1GB, 5GB, 10GB"
+                                                required
+                                            />
+                                        </div>
+                                        <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest mt-1 opacity-50">Define la cuota máxima de archivos en la nube para este usuario.</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Teléfono</Label>
+                                            <Input value={newUser.telefono} onChange={(e) => setNewUser(p => ({ ...p, telefono: e.target.value }))} className="h-11 text-sm font-bold uppercase" placeholder="Ej: +591 70000000" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] font-black uppercase text-muted-foreground">Cargo</Label>
+                                            <Input value={newUser.cargo} onChange={(e) => setNewUser(p => ({ ...p, cargo: e.target.value }))} className="h-11 text-sm font-bold uppercase" placeholder="Ej: Residente de Obra" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <DialogFooter className="p-6 bg-card border-t border-accent/20 gap-3">
+                                    <Button type="button" variant="ghost" onClick={() => setIsCreateDialogOpen(false)} disabled={isSubmitting} className="text-[10px] font-black uppercase tracking-widest">Cancelar</Button>
+                                    <Button type="submit" disabled={isSubmitting} className="bg-primary hover:bg-primary/90 text-background font-black text-[10px] uppercase tracking-widest px-8 h-11 ">
+                                        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Crear Usuario"}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            <Card className="border-accent/20 overflow-hidden bg-card  p-0">
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader className="bg-card">
+                            <TableRow className="hover:bg-card">
+                                <TableHead className="py-4 px-6 text-[10px] font-black uppercase">Usuario</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase">Correo electrónico</TableHead>
+                                <TableHead className="text-[10px] font-black uppercase text-center">Rol Actual</TableHead>
+                                <TableHead className="text-right text-[10px] font-black uppercase">Gestionar Rol</TableHead>
+                                <TableHead className="text-right px-6 text-[10px] font-black uppercase">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredUsers.map((u) => (
+                                <TableRow key={u.id} className="hover:bg-muted/40 transition-colors border-white/5">
+                                    <TableCell className="font-bold uppercase text-xs px-6 py-4">{u.name || 'Sin nombre'}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground font-mono">{u.email}</TableCell>
+                                    <TableCell className="text-center">
+                                        <Badge variant="outline" className="border-primary/20 px-2.5 py-0.5 text-[9px] font-black bg-primary/10 text-primary uppercase tracking-widest">
+                                            {u.role}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Select defaultValue={u.role} onValueChange={(val) => handleRoleChange(u.id, val as UserRole)}>
+                                            <SelectTrigger className="w-40 ml-auto bg-card border-accent/20 h-8 text-[9px] font-black uppercase">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-card border-accent/20 text-primary">
+                                                <SelectItem value="admin" className="text-[9px] font-bold uppercase">Administrador</SelectItem>
+                                                <SelectItem value="editor" className="text-[9px] font-bold uppercase">Editor</SelectItem>
+                                                <SelectItem value="viewer" className="text-[9px] font-black uppercase">Lector</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </TableCell>
+                                    <TableCell className="text-right px-6">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 transition-all">
+                                                    <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="bg-card border-white/10 text-primary p-1.5 rounded-xl">
+                                                <DropdownMenuItem className="text-[10px] font-black uppercase tracking-tight flex items-center gap-2 cursor-pointer focus:bg-primary/10 focus:text-primary rounded-lg" onClick={() => {
+                                                    setSelectedUser(u);
+                                                    setIsModalOpen(true);
+                                                }}>
+                                                    <UserIcon className="h-3.5 w-3.5" /> Ver detalles
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            {/* <div className="mt-12 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold font-headline flex items-center gap-3">
+                            <Wrench className="h-7 w-7 text-primary" /> Soporte Técnico
+                        </h2>
+                        <p className="text-muted-foreground mt-1">Gestión de tickets y solicitudes de soporte de los usuarios.</p>
+                    </div>
+                </div>
+                <Card className="border-muted/50 overflow-hidden bg-card/30 p-0">
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader className="bg-muted/50">
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="py-4 px-6 text-[10px] font-black uppercase">Ticket ID</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase">Asunto</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase">Usuario</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase">Fecha</TableHead>
+                                    <TableHead className="text-[10px] font-black uppercase text-center">Estado</TableHead>
+                                    <TableHead className="text-right px-6 text-[10px] font-black uppercase">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {mockTickets.map((ticket) => (
+                                    <TableRow key={ticket.id} className="hover:bg-white/5 transition-colors border-white/5">
+                                        <TableCell className="font-mono text-xs text-primary px-6">{ticket.id}</TableCell>
+                                        <TableCell className="font-bold uppercase text-xs text-primary">{ticket.subject}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{ticket.user}</TableCell>
+                                        <TableCell className="text-xs font-mono text-muted-foreground">{ticket.date}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant="outline" className={
+                                                ticket.status === 'Abierto' ? 'border-red-500/50 bg-red-500/10 text-red-500 text-[9px] font-black uppercase' :
+                                                    ticket.status === 'Resuelto' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase' :
+                                                        'border-amber-500/50 bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase'
+                                            }>
+                                                {ticket.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right px-6">
+                                            <Button variant="ghost" size="sm" className="text-xs hover:bg-primary/10 hover:text-primary">
+                                                Ver Ticket
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div> */}
+
+            {/* ── Sección Notificaciones ── */}
+            <div className="space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-4 rounded-xl border border-accent/20">
+                    <div>
+                        <h2 className="text-xl font-bold font-headline flex items-center gap-3">
+                            <Bell className="h-6 w-6 text-primary" /> Notificaciones
+                        </h2>
+                        <p className="text-muted-foreground mt-1 text-sm">Envía alertas o mensajes directamente a uno o todos los usuarios.</p>
+                    </div>
+                    <Dialog open={isNotifDialogOpen} onOpenChange={setIsNotifDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="bg-primary hover:bg-primary/40 text-background font-black text-[10px] uppercase tracking-widest px-8 h-11">
+                                <Send className="mr-2 h-4 w-4" /> Enviar Notificación
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg bg-card border-accent/20 text-primary p-0 overflow-hidden">
+                            <DialogHeader className="p-6 border-b border-accent/20">
+                                <DialogTitle className="text-lg font-bold uppercase tracking-tight flex items-center gap-2">
+                                    <Bell className="h-5 w-5" /> Nueva Notificación
+                                </DialogTitle>
+                                <DialogDescription className="text-[11px] text-muted-foreground">
+                                    El mensaje aparecerá en el buzón de entrada del usuario seleccionado.
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <form onSubmit={handleSendNotification}>
+                                <div className="p-6 space-y-5">
+                                    {/* Destinatario */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Destinatario</Label>
+                                        <Select
+                                            value={notifForm.targetUserId}
+                                            onValueChange={(v) => setNotifForm(p => ({ ...p, targetUserId: v }))}
+                                        >
+                                            <SelectTrigger className="bg-card border-accent/20 h-11 text-[11px] font-bold uppercase">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-card border-accent/20 text-primary">
+                                                <SelectItem value="all" className="text-[10px] font-black uppercase">
+                                                    <span className="flex items-center gap-2"><Users className="h-3.5 w-3.5" /> Todos los usuarios</span>
+                                                </SelectItem>
+                                                <Separator className="my-1" />
+                                                {users.map(u => (
+                                                    <SelectItem key={u.id} value={u.id} className="text-[10px] font-bold uppercase">
+                                                        <span className="flex items-center gap-2">
+                                                            <UserIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                                                            {u.name || u.email}
+                                                        </span>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Tipo */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</Label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {([
+                                                { value: 'info', icon: <Info className="h-4 w-4" />, label: 'Info', color: 'text-blue-500 border-blue-500/30 bg-blue-500/10' },
+                                                { value: 'success', icon: <CheckCircle2 className="h-4 w-4" />, label: 'Éxito', color: 'text-emerald-500 border-emerald-500/30 bg-emerald-500/10' },
+                                                { value: 'warning', icon: <AlertTriangle className="h-4 w-4" />, label: 'Alerta', color: 'text-amber-500 border-amber-500/30 bg-amber-500/10' },
+                                                { value: 'error', icon: <XIcon className="h-4 w-4" />, label: 'Error', color: 'text-red-500 border-red-500/30 bg-red-500/10' },
+                                            ] as const).map(({ value, icon, label, color }) => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => setNotifForm(p => ({ ...p, type: value }))}
+                                                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-lg border transition-all text-[9px] font-black uppercase tracking-widest ${notifForm.type === value ? color + ' ring-1 ring-current/30' : 'border-accent/20 text-muted-foreground hover:border-primary/30'}`}
+                                                >
+                                                    {icon}
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Título */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Título</Label>
+                                        <Input
+                                            value={notifForm.title}
+                                            onChange={(e) => setNotifForm(p => ({ ...p, title: e.target.value }))}
+                                            placeholder="Ej: Actualización del sistema"
+                                            className="bg-card border-accent/20 h-11 text-[12px] font-bold"
+                                            required
+                                        />
+                                    </div>
+
+                                    {/* Mensaje */}
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Mensaje</Label>
+                                        <Textarea
+                                            value={notifForm.message}
+                                            onChange={(e) => setNotifForm(p => ({ ...p, message: e.target.value }))}
+                                            placeholder="Escribe el contenido de la notificación..."
+                                            className="bg-card border-accent/20 text-[12px] font-mono resize-none h-24"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <DialogFooter className="p-6 border-t border-accent/20 gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={() => setIsNotifDialogOpen(false)}
+                                        className="text-[10px] uppercase tracking-widest font-bold h-11"
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        type="submit"
+                                        disabled={isSendingNotif}
+                                        className="bg-primary hover:bg-primary/40 text-background font-black text-[10px] uppercase tracking-widest h-11 px-8"
+                                    >
+                                        {isSendingNotif ? (
+                                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                                        ) : (
+                                            <><Send className="mr-2 h-4 w-4" /> Enviar</>
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </div>
+            </div>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="max-w-2xl bg-card border-accent/20 text-primary p-0 overflow-hidden  flex flex-col h-[80vh]">
+                    {selectedUser && (
+                        <div className="flex flex-col h-full">
+                            <DialogHeader className="p-6 bg-card border-b border-accent/20 flex flex-row items-center gap-4 space-y-0">
+                                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-2xl font-black text-primary border-2 border-primary/20 uppercase shadow-inner">
+                                    {selectedUser.name?.[0] || 'U'}
+                                </div>
+                                <div className="flex flex-col flex-1">
+                                    <DialogTitle className="text-2xl font-bold tracking-tight uppercase">{selectedUser.name || 'Sin Nombre'}</DialogTitle>
+                                    <DialogDescription className="flex items-center gap-3 mt-1.5">
+                                        <Badge variant="outline" className="border-primary/20 px-2.5 py-0.5 text-[9px] font-black bg-primary/10 text-primary uppercase tracking-widest">
+                                            {selectedUser.role}
+                                        </Badge>
+                                        <Badge variant="outline" className="border-emerald-500/20 px-2.5 py-0.5 text-[9px] font-black bg-emerald-500/10 text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+                                            <Globe className="h-2.5 w-2.5" /> {(selectedUser as any).storageLimit || '1GB'}
+                                        </Badge>
+                                        <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                                            <Mail className="h-3 w-3" /> {selectedUser.email}
+                                        </span>
+                                        {(selectedUser as any).telefono && (
+                                            <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                                                <Smartphone className="h-3 w-3" /> {(selectedUser as any).telefono}
+                                            </span>
+                                        )}
+                                        {(selectedUser as any).cargo && (
+                                            <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1">
+                                                <Briefcase className="h-3 w-3" /> {(selectedUser as any).cargo}
+                                            </span>
+                                        )}
+                                    </DialogDescription>
+                                </div>
+                            </DialogHeader>
+
+                            <div className="flex-1 overflow-hidden p-6 space-y-8">
+                                <ScrollArea className="h-full pr-4">
+                                    {isLoadingProjects ? (
+                                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground opacity-50">Sincronizando Terminales...</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-10">
+                                            {/* Proyectos de Autoría */}
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                                                        <Hammer className="h-4 w-4" /> Proyectos de Autoría
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-accent/20 bg-card text-[9px] font-black px-2 py-0.5 text-primary">
+                                                        {userProjectsByRole.own.length} TOTAL
+                                                    </Badge>
+                                                </div>
+                                                <Separator className="bg-accent" />
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {userProjectsByRole.own.length > 0 ? userProjectsByRole.own.map(p => (
+                                                        <Link
+                                                            key={p.id}
+                                                            href={`/projects/${p.id}`}
+                                                            className="group flex items-center justify-between p-4 rounded-xl bg-card border border-accent/20 hover:border-primary/30  transition-all"
+                                                            onClick={() => setIsModalOpen(false)}
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="h-10 w-10 rounded-lg bg-black/40 border border-accent/20 overflow-hidden">
+                                                                    <img src={p.imageUrl || 'https://picsum.photos/seed/proj/100/100'} alt={p.title} className="w-full h-full object-cover  group-hover:opacity-100 " />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-bold uppercase text-primary group-hover:text-primary transition-colors">{p.title}</p>
+                                                                    <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mt-0.5">{p.projectType} • {p.status}</p>
+                                                                </div>
+                                                            </div>
+                                                            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                                                        </Link>
+                                                    )) : (
+                                                        <div className="py-8 text-center border border-dashed border-white/5 rounded-2xl bg-white/1 opacity-20">
+                                                            <p className="text-[9px] font-black uppercase tracking-widest">Sin proyectos de autoría propia</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Proyectos como Colaborador */}
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 flex items-center gap-2">
+                                                        <Users className="h-4 w-4" /> Colaboraciones Externas
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-white/10 bg-white/5 text-[9px] font-black px-2 py-0.5 text-blue-400">
+                                                        {userProjectsByRole.collab.length} VINCULADOS
+                                                    </Badge>
+                                                </div>
+                                                <Separator className="bg-white/5" />
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {userProjectsByRole.collab.length > 0 ? userProjectsByRole.collab.map(p => (
+                                                        <Link
+                                                            key={p.id}
+                                                            href={`/projects/${p.id}`}
+                                                            className="group flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all "
+                                                            onClick={() => setIsModalOpen(false)}
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="h-10 w-10 rounded-lg bg-black/40 border border-blue-500/20 overflow-hidden">
+                                                                    <img src={p.imageUrl || 'https://picsum.photos/seed/proj/100/100'} alt={p.title} className="w-full h-full object-cover  group-hover:opacity-100 transition-opacity" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-bold uppercase text-primary group-hover:text-blue-400 transition-colors">{p.title}</p>
+                                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                                        <Badge className="bg-blue-500/20 text-blue-400 border-none text-[7px] font-black uppercase px-1.5 h-3.5">COLABORADOR</Badge>
+                                                                        <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{p.projectType}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-blue-400 transition-colors" />
+                                                        </Link>
+                                                    )) : (
+                                                        <div className="py-8 text-center border border-dashed border-accent/20 rounded-2xl bg-accent opacity-20">
+                                                            <p className="text-[9px] font-black uppercase tracking-widest">Sin colaboraciones externas registradas</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </ScrollArea>
+                            </div>
+
+                            <DialogFooter className="p-6 bg-card border-t border-accent/20">
+                                <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="text-[10px] uppercase tracking-widest w-full h-11 hover:bg-primary/20 font-bold bg-primary text-background">
+                                    Cerrar Terminal de Usuario
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

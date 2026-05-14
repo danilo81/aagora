@@ -7,11 +7,15 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "format": "turbo format",
-    "typecheck": "turbo typecheck"
+    "typecheck": "turbo typecheck",
+    "auth:generate": "bun --cwd packages/db run auth-db:generate",
+    "auth:push": "bun --cwd packages/db run auth-db:push"
   },
   "devDependencies": {
+    "@types/lodash.debounce": "^4.0.9",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
+    "drizzle-kit": "^0.31.10",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "turbo": "^2.8.17",
@@ -20,5 +24,18 @@
   "packageManager": "pnpm@9.15.9",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "utf-8-validate"
+      ],
+      "allowAny": [
+        "three"
+      ]
+    }
   }
 }
