@@ -126,7 +126,7 @@ export default function TasksPage() {
         setLoading(true);
         try {
             const [tasksData, projectsData] = await Promise.all([
-                getTasks(projectId),
+                (getTasks as (id?: string) => Promise<any[]>)(projectId),
                 getProjects()
             ]);
             setTasks(tasksData as any);
@@ -289,7 +289,7 @@ export default function TasksPage() {
 
         try {
             const result = await updateTask(taskId, { status: newStatus } as any) as TaskResult;
-            if (!result.success) throw new Error(result.error);
+            if (!result.success) throw new Error((result as { success: false; error: string }).error);
         } catch {
             toast({ title: "Error al mover tarea", variant: "destructive" });
             loadData();
@@ -784,4 +784,10 @@ function TaskCard({ task, handleEditClick, handleDeleteTask, getPriorityColor, d
                                     <Trash2 className="h-3.5 w-3.5 text-destructive" /> Eliminar
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
-             
+                        </DropdownMenu>
+                    )}
+                </div>
+            </div>
+        </Card>
+    );
+}
