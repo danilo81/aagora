@@ -36,6 +36,8 @@ export async function createUser(data: {
             cargo: data.cargo || null,
         }).returning();
 
+        if (!newUser) return { error: 'Error al crear el usuario.' };
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { password: _password, ...userWithoutPassword } = newUser;
         return userWithoutPassword;

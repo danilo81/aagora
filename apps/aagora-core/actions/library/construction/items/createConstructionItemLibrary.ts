@@ -38,6 +38,8 @@ export async function createConstructionItemLibrary(data: {
             userId: currentUserId,
         }).returning();
 
+        if (!item) return { success: false, error: 'Error al crear el ítem.' };
+
         for (const s of data.supplies ?? []) {
             let supplyId = s.id;
             if (s.isNew || s.id?.startsWith('temp-')) {
@@ -48,13 +50,13 @@ export async function createConstructionItemLibrary(data: {
                     supplyId = existingSupply.id;
                 } else {
                     const [newSupply] = await db.insert(supply).values({
-                        typology: s.typology,
+                        typology: s.typology ?? '',
                         description: s.description,
                         unit: s.unit,
                         price: Number(s.price) || 0,
                         userId: currentUserId,
                     }).returning();
-                    supplyId = newSupply.id;
+                    if (newSupply) supplyId = newSupply.id;
                 }
             }
             if (supplyId) {
@@ -71,7 +73,7 @@ export async function createConstructionItemLibrary(data: {
                 description: qc.description,
                 itemId: item.id,
             }).returning();
-            if (qc.subPoints?.length) {
+            if (newQc && qc.subPoints?.length) {
                 await db.insert(qualityControlSubPoint).values(
                     qc.subPoints.map((sp: any) => ({ description: sp.description, qualityControlId: newQc.id }))
                 );

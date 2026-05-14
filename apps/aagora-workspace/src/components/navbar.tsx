@@ -167,13 +167,13 @@ export function Navbar() {
             setTasks(tasksData as (Task & { projectName?: string })[]);
             setProjects(projsData as Project[]);
             setUpcomingEvents(eventsData as CalendarEvent[]);
-            
+
             const summary = summaryData as { unreadCount: number; totalCount: number };
-            setInboxSummary({ 
-                totalUnread: summary.unreadCount || 0, 
-                hasUpdates: (summary.unreadCount || 0) > 0 
+            setInboxSummary({
+                totalUnread: summary.unreadCount || 0,
+                hasUpdates: (summary.unreadCount || 0) > 0
             });
-            
+
             setUnreadCount(notifsData.filter(n => !n.isRead).length);
             setPendingTasksCount(tasksData.filter(t => t.status !== 'completado').length);
             setHasFetchedDetails(true);
@@ -468,7 +468,7 @@ export function Navbar() {
     if (!mounted) return null;
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b border-accent bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-8 h-16 flex items-center justify-between">
+        <nav className="sticky top-0 z-50 w-full border-b border-accent bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 px-4 md:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-4">
                 {/* MENÚ MÓVIL (Sheet) */}
                 <div className="lg:hidden">
@@ -914,9 +914,9 @@ export function Navbar() {
                                         <Calendar className="mr-2 h-3.5 w-3.5" /> Evento
                                     </Button>
                                 </div>
-                                <Button 
-                                    variant="default" 
-                                    className="w-full text-[10px] font-black uppercase tracking-widest h-10 rounded-lg bg-primary text-background hover:opacity-90 cursor-pointer" 
+                                <Button
+                                    variant="default"
+                                    className="w-full text-[10px] font-black uppercase tracking-widest h-10 rounded-lg bg-primary text-background hover:opacity-90 cursor-pointer"
                                     onClick={() => window.location.href = process.env.NEXT_PUBLIC_CORE_URL || '/'}
                                 >
                                     Ir al Dashboard Principal
@@ -1422,11 +1422,11 @@ export function Navbar() {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <div className="space-y-2">
                                                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">Moneda Principal</Label>
-                                                <Input value={configParams.mainCurrency} onChange={(e) => updateConfigParam('mainCurrency', e.target.value)} className="h-11 bg-card border-accent uppercase font-bold text-xs" placeholder="EJ: BS" />
+                                                <Input value={configParams.mainCurrency ?? ''} onChange={(e) => updateConfigParam('mainCurrency', e.target.value)} className="h-11 bg-card border-accent uppercase font-bold text-xs" placeholder="EJ: BS" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">Moneda Secundaria</Label>
-                                                <Input value={configParams.secondaryCurrency} onChange={(e) => updateConfigParam('secondaryCurrency', e.target.value)} className="h-11 bg-card border-accent uppercase font-bold text-xs" placeholder="EJ: USD" />
+                                                <Input value={configParams.secondaryCurrency ?? ''} onChange={(e) => updateConfigParam('secondaryCurrency', e.target.value)} className="h-11 bg-card border-accent uppercase font-bold text-xs" placeholder="EJ: USD" />
                                             </div>
                                             <div className="space-y-2">
                                                 <Label className="text-[9px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">Tipo de Cambio</Label>
@@ -1621,7 +1621,7 @@ export function Navbar() {
                         </DialogHeader>
                         <div className="flex-1 overflow-hidden p-6">
                             <ScrollArea className="h-full pr-4">
-                                { (activeProject.siteLogs?.length ?? 0) > 0 ? (
+                                {(activeProject.siteLogs?.length ?? 0) > 0 ? (
                                     <div className="space-y-6 relative pl-4">
                                         <div className="absolute left-2.75 top-2 bottom-2 w-px bg-primary" />
                                         {activeProject.siteLogs?.map((log: any) => (

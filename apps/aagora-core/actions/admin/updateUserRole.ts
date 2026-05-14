@@ -22,8 +22,9 @@ export async function updateUserRole(userId: string, newRole: UserRole) {
         try {
             const client = await clerkClient();
             const clerkUsers = await client.users.getUserList({ emailAddress: [updated.email] });
-            if (clerkUsers.data.length > 0) {
-                await client.users.updateUserMetadata(clerkUsers.data[0].id, {
+            const clerkUser = clerkUsers.data[0];
+            if (clerkUser) {
+                await client.users.updateUserMetadata(clerkUser.id, {
                     publicMetadata: { role: newRole },
                 });
             }

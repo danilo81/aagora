@@ -3,5 +3,5 @@
 import { wGet } from '@/lib/workspace-api';
 
 export async function getCalendarEventsDb() {
-    return (await wGet('/api/calendar')) ?? { success: false, events: [] };
+    return (await wGet<{ success: boolean; events: any[] }>('/api/calendar')) ?? { success: false, events: [] };
 }

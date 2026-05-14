@@ -22,8 +22,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         return NextResponse.json({ error: "No autorizado o tarea no encontrada" }, { status: 403 });
     }
 
+    const { dueDate, ...rest } = parsed.data;
     const [updated] = await db.update(task)
-        .set({ ...parsed.data, updatedAt: new Date() })
+        .set({
+            ...rest,
+            ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}),
+            updatedAt: new Date(),
+        })
         .where(and(eq(task.id, id), eq(task.userId, userId)))
         .returning();
 

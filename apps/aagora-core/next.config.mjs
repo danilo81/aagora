@@ -35,8 +35,10 @@ const securityHeaders = [
 
 const nextConfig = {
   transpilePackages: ["@workspace/ui", "@workspace/db", "@workspace/auth"],
-  serverActions: {
-    bodySizeLimit: '6mb',
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
   },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];

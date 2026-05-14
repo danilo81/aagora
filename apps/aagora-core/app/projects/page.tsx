@@ -117,7 +117,7 @@ function ProjectsPageContent() {
         fetchProjects();
     }, []);
 
-    const getProjectImageUrl = (url: string | null) => {
+    const getProjectImageUrl = (url: string | null | undefined) => {
         if (!url || url === '/project-img.png') return '/project-img.png';
         if (url.startsWith('http')) return url;
         return url;

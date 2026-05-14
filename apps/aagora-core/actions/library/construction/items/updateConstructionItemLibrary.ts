@@ -55,10 +55,10 @@ export async function updateConstructionItemLibrary(id: string, data: {
                         supplyId = found.id;
                     } else {
                         const [ns] = await db.insert(supply).values({
-                            typology: s.typology, description: s.description,
+                            typology: s.typology ?? '', description: s.description,
                             unit: s.unit, price: Number(s.price) || 0, userId: currentUserId,
                         }).returning();
-                        supplyId = ns.id;
+                        if (ns) supplyId = ns.id;
                     }
                 }
                 if (supplyId) {
@@ -71,7 +71,7 @@ export async function updateConstructionItemLibrary(id: string, data: {
             await db.delete(qualityControl).where(eq(qualityControl.itemId, id));
             for (const qc of data.qualityControls) {
                 const [newQc] = await db.insert(qualityControl).values({ description: qc.description, itemId: id }).returning();
-                if (qc.subPoints?.length) {
+                if (newQc && qc.subPoints?.length) {
                     await db.insert(qualityControlSubPoint).values(
                         qc.subPoints.map((sp: any) => ({ description: sp.description, qualityControlId: newQc.id }))
                     );

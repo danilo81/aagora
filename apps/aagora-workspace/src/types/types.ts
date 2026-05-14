@@ -39,28 +39,30 @@ export interface Project {
     title: string;
     name?: string; // Some legacy code uses name
     code?: string; // Some legacy code uses code
-    description: string;
-    imageUrl: string;
+    description: string | null;
+    imageUrl: string | null;
     links?: {
         label: string;
         url: string;
     }[];
     authorId: string | null;
-    createdAt: string;
-    startDate?: string | null;
+    createdAt: string | Date;
+    updatedAt?: string | Date | null;
+    startDate?: string | Date | null;
+    endDate?: string | Date | null;
+    consolidatedAt?: string | Date | null;
     config?: ProjectConfig | null;
     client?: string | null;
     location?: string | null;
     projectType?: string | null;
     area?: number | null;
-    status?: 'activo' | 'espera' | 'finalizado' | 'construccion' | null;
+    status?: 'activo' | 'espera' | 'finalizado' | 'construccion' | (string & {}) | null;
     team?: Contact[] | null;
     levels?: Level[] | null;
     items?: ProjectItem[] | null;
     changeOrders?: ProjectChangeOrder[] | null;
     siteLogs?: SiteLog[] | null;
     inspectionRecords?: InspectionRecord[] | null;
-    consolidatedAt?: string | null;
 }
 
 export interface SiteLog {

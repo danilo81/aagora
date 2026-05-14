@@ -14,7 +14,8 @@ export async function deleteConstructionItemLibrary(id: string) {
         const existing = await db.query.constructionItem.findFirst({ where: eq(constructionItem.id, id), columns: { userId: true } });
         if (!existing || existing.userId !== currentUserId) return { success: false, error: 'No tienes permisos para eliminar esta partida.' };
 
-        const [{ total: usageCount }] = await db.select({ total: count() }).from(projectItem).where(eq(projectItem.itemId, id));
+        const usageResult = await db.select({ total: count() }).from(projectItem).where(eq(projectItem.itemId, id));
+        const usageCount = usageResult[0]?.total ?? 0;
         if (usageCount > 0) {
             return {
                 success: false,

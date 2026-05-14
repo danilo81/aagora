@@ -34,6 +34,8 @@ export async function createSupplyLibrary(data: {
             userId: currentUserId,
         }).returning();
 
+        if (!newSupply) return { success: false, error: 'Error al crear el insumo.' };
+
         if (data.supplierId) {
             await db.insert(supplyCost).values({
                 supplyId: newSupply.id,

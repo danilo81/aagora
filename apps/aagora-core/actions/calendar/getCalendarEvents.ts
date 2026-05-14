@@ -3,7 +3,7 @@
 import { db } from "@workspace/db";
 import { project, projectItem, constructionItem } from "@workspace/db/schema";
 import { eq, inArray, asc, and } from "drizzle-orm";
-import { getAccessibleProjectIds } from '../projects/getAccessibleProjectIds';
+import { getAccessibleProjectIds } from '@/actions/projects/getAccessibleProjectIds';
 
 export async function getCalendarEvents() {
     try {

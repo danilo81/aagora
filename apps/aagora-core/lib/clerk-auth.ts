@@ -10,9 +10,9 @@ export async function getAuthUserId(): Promise<string | null> {
     return clerkId;
 }
 
-export async function getAuthSessionClaims() {
+export async function getAuthSessionClaims(): Promise<Record<string, unknown> | null> {
     const { sessionClaims } = await auth();
-    return sessionClaims;
+    return sessionClaims as Record<string, unknown> | null;
 }
 
 /**

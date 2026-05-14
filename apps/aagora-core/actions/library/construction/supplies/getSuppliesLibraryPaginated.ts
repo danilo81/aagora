@@ -30,7 +30,7 @@ export async function getSuppliesLibraryPaginated(
         }
         const where = and(...conditions);
 
-        const [supplies, [{ total: totalCount }]] = await Promise.all([
+        const [supplies, countResult] = await Promise.all([
             db.query.supply.findMany({
                 where,
                 orderBy: asc(supply.description),
@@ -45,6 +45,7 @@ export async function getSuppliesLibraryPaginated(
             }),
             db.select({ total: count() }).from(supply).where(where),
         ]);
+        const totalCount = countResult[0]?.total ?? 0;
 
         const formattedSupplies = supplies.map((s) => ({
             ...s,
