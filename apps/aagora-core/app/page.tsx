@@ -317,7 +317,7 @@ export default function Home() {
             <div className="space-y-6">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Compañía</h4>
               <ul className="space-y-3 text-xs font-bold text-muted-foreground">
-                <li className="hover:text-primary cursor-pointer transition-colors">admin@aagoraapp.com</li>
+                <li className="hover:text-primary cursor-pointer transition-colors">admind-patriota@aagoraapp.com</li>
               </ul>
             </div>
           </div>

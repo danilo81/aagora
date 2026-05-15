@@ -1675,7 +1675,9 @@ export function Navbar() {
                                         </div>
                                     </div>
                                 </TabsContent>
-                                <TabsContent value="parametros" className="mt-0 space-y-10">
+                                <TabsContent value="parametros" className="mt-0">
+                                    <ScrollArea className="h-[calc(90vh-220px)] pr-4">
+                                    <div className="space-y-10">
                                     <div className="space-y-6">
                                         <h3 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] border-b border-accent/20 pb-2">Coeficientes de Sobrecosto (%)</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1765,6 +1767,8 @@ export function Navbar() {
                                             </div>
                                         </div>
                                     </div>
+                                    </div>
+                                    </ScrollArea>
                                 </TabsContent>
                                 <TabsContent value="niveles" className="mt-0 space-y-6">
                                     <div className="flex items-center justify-between mb-4">
