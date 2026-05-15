@@ -4,7 +4,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { db } from "@workspace/db";
 import { libraryFile } from "@workspace/db/schema";
-import { s3Client } from "@/lib/s3-client";
+import { getS3Client } from "@/lib/s3-client";
 
 const MAX_FILE_SIZE = 200 * 1024 * 1024;
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
             ContentType: contentType,
         });
 
-        const presignedUrl = await getSignedUrl(s3Client, command, {
+        const presignedUrl = await getSignedUrl(getS3Client(), command, {
             expiresIn: 3600,
             signableHeaders: new Set(["content-type"]),
         });
@@ -65,3 +65,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

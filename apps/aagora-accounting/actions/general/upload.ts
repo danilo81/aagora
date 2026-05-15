@@ -6,7 +6,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db, user } from "@workspace/db";
 import { projectDocument } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { s3Client } from "@/lib/s3-client";
+import { getS3Client } from "@/lib/s3-client";
 
 export async function getUploadUrl(fileName: string, fileType: string, fileSize: number) {
     try {
@@ -34,7 +34,7 @@ export async function getUploadUrl(fileName: string, fileType: string, fileSize:
             ContentType: fileType,
         });
 
-        const signedUrl = await getSignedUrl(s3Client, command, {
+        const signedUrl = await getSignedUrl(getS3Client(), command, {
             expiresIn: 3600,
             signableHeaders: new Set(["content-type"]),
         });

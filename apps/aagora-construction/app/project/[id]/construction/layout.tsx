@@ -5,3 +5,4 @@ export default async function ConstructionLayout({ children, params }: { childre
     await checkModuleAccess(id, 'construction');
     return <>{children}</>;
 }
+export const runtime = 'edge';

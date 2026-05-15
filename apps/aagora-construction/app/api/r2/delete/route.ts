@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
-import { r2Client } from "@/lib/r2Client";
+import { getR2Client } from "@/lib/r2Client";
 import { db, libraryFile } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -33,7 +33,7 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: "No tienes permiso para eliminar este archivo" }, { status: 403 });
         }
 
-        await r2Client.send(
+        await getR2Client().send(
             new DeleteObjectCommand({
                 Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
                 Key: key,
@@ -48,3 +48,4 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: "Failed to delete file" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

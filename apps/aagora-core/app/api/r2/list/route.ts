@@ -36,3 +36,4 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

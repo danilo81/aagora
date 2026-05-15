@@ -14,3 +14,4 @@ export default function ConstructionLibraryLayout({
         </div>
     );
 }
+export const runtime = 'edge';

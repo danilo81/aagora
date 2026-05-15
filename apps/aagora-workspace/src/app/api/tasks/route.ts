@@ -44,3 +44,4 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: (error as Error).message || "Error al insertar tarea en DB" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

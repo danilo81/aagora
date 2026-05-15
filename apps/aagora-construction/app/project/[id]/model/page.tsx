@@ -275,7 +275,7 @@ export default function ModelPage() {
         setIsAssignModalOpen(true);
         try {
             const lib = await getLibraryAssets();
-            setLibraryAssets(lib.filter((a: FixedAsset) => a.status === 'disponible' && a.projectId !== project?.id));
+            setLibraryAssets((lib as FixedAsset[]).filter((a) => a.status === 'disponible' && a.projectId !== project?.id));
         } catch (error) {
             console.error(error);
         }

@@ -2,7 +2,7 @@
 
 import { db, bimDocument, bimTopic, projectDocument } from '@workspace/db';
 import { eq } from 'drizzle-orm';
-import { r2Client } from "@/lib/r2Client";
+import { getR2Client } from "@/lib/r2Client";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getAuthUserId } from "@/lib/clerk-auth";
 import puppeteer, { Browser } from 'puppeteer';
@@ -81,7 +81,7 @@ export async function exportTopicToPDF(
         const uniqueKey = `pdf_exports/${uuidv4()}_${filename}`;
         const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
 
-        await r2Client.send(new PutObjectCommand({
+        await getR2Client().send(new PutObjectCommand({
             Bucket: bucketName,
             Key: uniqueKey,
             ContentType: 'application/pdf',

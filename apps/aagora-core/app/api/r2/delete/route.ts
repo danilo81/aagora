@@ -4,7 +4,7 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "@workspace/db";
 import { libraryFile } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { s3Client } from "@/lib/s3-client";
+import { getS3Client } from "@/lib/s3-client";
 
 export async function DELETE(req: NextRequest) {
     try {
@@ -22,7 +22,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "Archivo no encontrado o sin permisos" }, { status: 404 });
         }
 
-        await s3Client.send(new DeleteObjectCommand({
+        await getS3Client().send(new DeleteObjectCommand({
             Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
             Key: key,
         }));
@@ -35,3 +35,4 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

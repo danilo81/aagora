@@ -3,7 +3,7 @@ import React, { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows, Grid, GizmoHelper, GizmoViewport, TransformControls, OrthographicCamera, PerspectiveCamera, Line, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
+interface OrbitControlsImpl { target: THREE.Vector3; update(): void; enabled: boolean; }
 import { BuildingModel } from './BuildingModel';
 import { GripController } from './GripController';
 import dynamic from 'next/dynamic';
@@ -1776,7 +1776,7 @@ export function BimViewer({
         </Suspense>
 
         <OrbitControls
-          ref={controlsRef}
+          ref={controlsRef as React.Ref<any>}
           makeDefault
           enabled={(activeTool === null || activeTool === 'select') && selectionMode === 'single'}
           enableRotate={viewMode === '3D'}

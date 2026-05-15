@@ -5,3 +5,4 @@ export default async function OperationsLayout({ children, params }: { children:
     await checkModuleAccess(id, 'operations');
     return <>{children}</>;
 }
+export const runtime = 'edge';

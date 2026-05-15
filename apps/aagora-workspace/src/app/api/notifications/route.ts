@@ -29,3 +29,4 @@ export async function PATCH() {
 
     return NextResponse.json({ success: true });
 }
+export const runtime = 'edge';

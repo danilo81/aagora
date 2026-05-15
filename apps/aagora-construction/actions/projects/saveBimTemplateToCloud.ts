@@ -3,7 +3,7 @@
 import { db, bimDocument, bimTopic, libraryFile } from '@workspace/db';
 import { eq } from 'drizzle-orm';
 import { getAuthUserId } from '@/lib/clerk-auth';
-import { r2Client } from "@/lib/r2Client";
+import { getR2Client } from "@/lib/r2Client";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 
@@ -54,7 +54,7 @@ export async function saveBimTemplateToCloud(projectId: string, templateName: st
             ContentLength: buffer.length,
         });
 
-        await r2Client.send(command);
+        await getR2Client().send(command);
 
         const publicUrl = constructPublicUrl(uniqueKey);
 

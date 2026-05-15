@@ -5,7 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { getAuthUserId } from '@/lib/clerk-auth';
 import { db } from "@workspace/db";
 import { projectDocument } from "@workspace/db/schema";
-import { s3Client } from "@/lib/s3-client";
+import { getS3Client } from "@/lib/s3-client";
 import { getDbUser } from "@/lib/get-db-user";
 
 export async function getUploadUrl(fileName: string, fileType: string, fileSize: number) {
@@ -43,7 +43,7 @@ export async function getUploadUrl(fileName: string, fileType: string, fileSize:
             ContentType: fileType,
         });
 
-        const signedUrl = await getSignedUrl(s3Client, command, {
+        const signedUrl = await getSignedUrl(getS3Client(), command, {
             expiresIn: 3600,
             signableHeaders: new Set(["content-type"]),
         });

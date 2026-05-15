@@ -286,7 +286,7 @@ export function Navbar() {
             setIsFetchingDetails(true);
             try {
                 const [notifData, tasksData, eventsData, projectsData] = await Promise.all([
-                    getNotifications(user.id),
+                    getNotifications(),
                     getTasks(),
                     getUpcomingEvents(),
                     getProjects()

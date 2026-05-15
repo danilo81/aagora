@@ -91,3 +91,4 @@ export async function GET() {
 
     return NextResponse.json(sorted);
 }
+export const runtime = 'edge';

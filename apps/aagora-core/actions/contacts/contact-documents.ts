@@ -7,7 +7,7 @@ import { contactDocument, contact } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { getAuthUserId } from "@/lib/clerk-auth";
 import { revalidatePath } from "next/cache";
-import { s3Client } from "@/lib/s3-client";
+import { getS3Client } from "@/lib/s3-client";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -52,7 +52,7 @@ export async function uploadContactDocument(formData: FormData) {
 
         const arrayBuffer = await file.arrayBuffer();
 
-        await s3Client.send(new PutObjectCommand({
+        await getS3Client().send(new PutObjectCommand({
             Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
             Key: r2Key,
             Body: Buffer.from(arrayBuffer),
@@ -101,7 +101,7 @@ export async function getContactDocumentDownloadUrl(documentId: string) {
             ResponseContentDisposition: `inline; filename="${doc.name}"`,
         });
 
-        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+        const signedUrl = await getSignedUrl(getS3Client(), command, { expiresIn: 300 });
         return { success: true, url: signedUrl };
     } catch (error: any) {
         console.error("Error generating download URL:", error);
@@ -137,7 +137,7 @@ export async function deleteContactDocument(documentId: string) {
 
         // Non-fatal R2 deletion — always clean up the DB record
         try {
-            await s3Client.send(new DeleteObjectCommand({
+            await getS3Client().send(new DeleteObjectCommand({
                 Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
                 Key: doc.r2Key,
             }));

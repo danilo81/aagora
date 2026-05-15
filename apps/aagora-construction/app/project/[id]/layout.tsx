@@ -76,3 +76,4 @@ export default async function ProjectIdLayout({
         </ProjectPermissionsProvider>
     );
 }
+export const runtime = 'edge';

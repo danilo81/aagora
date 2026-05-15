@@ -14,3 +14,4 @@ export default function ParametersLibraryLayout({
         </div>
     );
 }
+export const runtime = 'edge';

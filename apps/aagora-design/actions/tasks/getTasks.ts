@@ -3,5 +3,5 @@
 import { wGet } from '@/lib/workspace-api';
 
 export async function getTasks() {
-    return (await wGet('/api/tasks')) ?? [];
+    return (await wGet<any[]>('/api/tasks')) ?? [];
 }

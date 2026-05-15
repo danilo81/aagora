@@ -9,3 +9,4 @@ export default async function DocumentationLayout({ children, params }: { childr
     }
     return <>{children}</>;
 }
+export const runtime = 'edge';

@@ -12,8 +12,9 @@ export async function getProjectDocuments(projectId: string): Promise<ProjectDoc
 
         return docs.map(d => ({
             ...d,
-            createdAt: d.createdAt.toISOString()
-        })) as ProjectDocument[];
+            createdAt: d.createdAt.toISOString(),
+            updatedAt: d.updatedAt.toISOString(),
+        })) as unknown as ProjectDocument[];
     } catch (error) {
         console.error('Error fetching documents:', error);
         return [];

@@ -16,3 +16,4 @@ export default function DashboardLayout({
         </div>
     );
 }
+export const runtime = 'edge';

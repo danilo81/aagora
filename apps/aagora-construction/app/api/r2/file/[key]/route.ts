@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { r2Client } from "@/lib/r2Client";
+import { getR2Client } from "@/lib/r2Client";
 
 interface Props {
     params: Promise<{ key: string }>;
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         const searchParams = request.nextUrl.searchParams;
         const download = searchParams.get("download") === "true";
         const filename = searchParams.get("filename") || "archivo";
-        
+
         const keyToFetch = decodeURIComponent(key);
 
         if (!keyToFetch || keyToFetch === "undefined") {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         let response;
         try {
-            response = await r2Client.send(command);
+            response = await getR2Client().send(command);
         } catch (e) {
             // Fallback to private bucket if public fails
             bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest, { params }: Props) {
                 Bucket: bucketName,
                 Key: keyToFetch,
             });
-            response = await r2Client.send(command);
+            response = await getR2Client().send(command);
         }
 
         if (!response.Body) {
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         if (response.ContentLength) {
             headers.set("Content-Length", response.ContentLength.toString());
         }
-        
+
         if (download) {
             headers.set("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
         }
@@ -65,3 +65,4 @@ export async function GET(request: NextRequest, { params }: Props) {
         return NextResponse.json({ error: "Failed to fetch file content" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

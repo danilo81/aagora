@@ -16,3 +16,4 @@ export default function ContactsLayout({
         </div>
     );
 }
+export const runtime = 'edge';

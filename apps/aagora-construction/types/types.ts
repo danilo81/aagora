@@ -234,6 +234,10 @@ export interface Level {
     id: string;
     name: string;
     projectId: string;
+    isStory: boolean;
+    elevation: number;
+    defaultWallHeight: number;
+    cutPlane: number;
     createdAt?: Date;
     updatedAt?: Date;
 }

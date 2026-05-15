@@ -41,3 +41,4 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Failed to list files" }, { status: 500 });
     }
 }
+export const runtime = 'edge';

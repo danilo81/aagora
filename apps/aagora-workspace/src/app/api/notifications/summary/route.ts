@@ -22,3 +22,4 @@ export async function GET() {
         tasksCount: tasksData.length,
     });
 }
+export const runtime = 'edge';

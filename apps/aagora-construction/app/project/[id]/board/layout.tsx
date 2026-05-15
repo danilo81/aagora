@@ -5,3 +5,4 @@ export default async function BoardLayout({ children, params }: { children: Reac
     await checkModuleAccess(id, 'board');
     return <>{children}</>;
 }
+export const runtime = 'edge';

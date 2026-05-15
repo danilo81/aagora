@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { FileWithMetadata } from "@/components/ui/dropzone";
+import { FileWithMetadata } from "@workspace/ui/components/dropzone";
 
 export function useFileUpload() {
     const [files, setFiles] = useState<FileWithMetadata[]>([]);
