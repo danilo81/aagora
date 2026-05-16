@@ -27,7 +27,9 @@
     "node": ">=20"
   },
   "dependencies": {
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.2",
+    "shadcn": "^4.6.0",
+    "tw-animate-css": "^1.2.9"
   },
   "pnpm": {
     "peerDependencyRules": {
@@ -37,6 +39,18 @@
       "allowAny": [
         "three"
       ]
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@clerk/shared",
+      "bufferutil",
+      "core-js",
+      "core-js-pure",
+      "esbuild",
+      "msw",
+      "sharp",
+      "unrs-resolver",
+      "utf-8-validate",
+      "workerd"
+    ]
   }
 }
