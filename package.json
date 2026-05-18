@@ -40,6 +40,11 @@
         "three"
       ]
     },
+    "overrides": {
+      "esbuild": "0.25.4",
+      "@opennextjs/cloudflare>esbuild": "0.25.4",
+      "@opennextjs/aws>esbuild": "0.25.4"
+    },
     "onlyBuiltDependencies": [
       "@clerk/shared",
       "bufferutil",
