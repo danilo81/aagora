@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { ratelimit } from "@/lib/rate-limit";
+import { getAppUrl } from "@workspace/ui/lib/utils";
 
 // Export runtime to ensure Cloudflare/OpenNext uses the Edge runtime
 export const runtime = "experimental-edge";
@@ -38,14 +39,15 @@ export default clerkMiddleware(async (auth, request) => {
     const { userId, sessionClaims } = await auth();
     const metadata = sessionClaims?.publicMetadata as Record<string, unknown> | undefined;
     const accountType = metadata?.accountType as string | undefined;
+    
+    // Get host header to dynamically resolve the redirect URL if running on Vercel/Cloudflare
+    const host = request.headers.get("host") || undefined;
 
     // Landing page: authenticated users go to dashboard, others see landing
     if (isHomeRoute(request)) {
         if (userId) {
             if (accountType === "proveedor") {
-                return NextResponse.redirect(
-                    process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "http://localhost:3002"
-                );
+                return NextResponse.redirect(getAppUrl("community", host));
             }
             return NextResponse.redirect(new URL("/dashboard", request.url));
         }
@@ -75,9 +77,7 @@ export default clerkMiddleware(async (auth, request) => {
     // that the session is authenticated (userId check above covers that).
 
     if (accountType === "proveedor") {
-        return NextResponse.redirect(
-            process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "http://localhost:3002"
-        );
+        return NextResponse.redirect(getAppUrl("community", host));
     }
 
     return NextResponse.next();

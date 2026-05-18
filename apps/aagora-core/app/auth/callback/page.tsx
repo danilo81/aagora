@@ -2,6 +2,7 @@ import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db, user } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getAppUrl } from "@workspace/ui/lib/utils";
 
 export default async function AuthCallbackPage() {
     const { userId, sessionClaims } = await auth();
@@ -44,7 +45,7 @@ export default async function AuthCallbackPage() {
     // Already has account type — route by type
     if (accountType) {
         if (accountType === "proveedor") {
-            redirect(process.env.NEXT_PUBLIC_COMMUNITY_URL ?? "http://localhost:3002");
+            redirect(getAppUrl("community"));
         }
         redirect("/dashboard");
     }
