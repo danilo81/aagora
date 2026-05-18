@@ -32,11 +32,17 @@
       ]
     },
     "@workspace/auth#build": {
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": [
         "dist/**"
       ]
     },
     "@workspace/db#build": {
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": [
         "dist/**"
       ]
