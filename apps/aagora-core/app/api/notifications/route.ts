@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@workspace/db";
 import { notification } from "@workspace/db/schema";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { and, desc, eq, sql } from "drizzle-orm";
 
 // GET /api/notifications — list the caller's notifications
@@ -29,4 +30,3 @@ export async function PATCH() {
 
     return NextResponse.json({ success: true });
 }
-export const runtime = 'edge';

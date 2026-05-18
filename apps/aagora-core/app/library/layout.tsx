@@ -9,4 +9,3 @@ export default async function LibraryLayout({
         </main>
     );
 }
-export const runtime = 'edge';

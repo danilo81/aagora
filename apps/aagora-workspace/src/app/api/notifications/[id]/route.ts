@@ -28,4 +28,3 @@ export async function PATCH(_req: Request, { params }: { params: Promise<{ id: s
 
     return NextResponse.json({ success: true });
 }
-export const runtime = 'edge';

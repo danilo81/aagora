@@ -5,4 +5,3 @@ export default async function TasksLayout({ children, params }: { children: Reac
     await checkModuleAccess(id, 'tasks');
     return <>{children}</>;
 }
-export const runtime = 'edge';

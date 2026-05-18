@@ -3,9 +3,6 @@ import { NextResponse } from "next/server";
 import { ratelimit } from "@/lib/rate-limit";
 import { getAppUrl } from "@workspace/ui/lib/utils";
 
-// Export runtime to ensure Cloudflare/OpenNext uses the Edge runtime
-export const runtime = "experimental-edge";
-
 const isPublicRoute = createRouteMatcher([
     "/sign-in(.*)",
     "/sign-up(.*)",

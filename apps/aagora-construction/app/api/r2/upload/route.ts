@@ -50,9 +50,9 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ presignedUrl, key: r2Key, publicUrl });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("Error in /api/r2/upload:", error);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
 }
-export const runtime = 'edge';

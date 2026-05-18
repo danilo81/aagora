@@ -31,9 +31,9 @@ export async function GET(req: NextRequest) {
         }));
 
         return NextResponse.json({ success: true, files: result });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("Error in /api/r2/list:", error);
         return NextResponse.json({ success: false, error: "Error interno" }, { status: 500 });
     }
 }
-export const runtime = 'edge';

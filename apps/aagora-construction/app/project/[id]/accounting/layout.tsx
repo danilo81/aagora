@@ -5,4 +5,3 @@ export default async function AccountingLayout({ children, params }: { children:
     await checkModuleAccess(id, 'accounting');
     return <>{children}</>;
 }
-export const runtime = 'edge';

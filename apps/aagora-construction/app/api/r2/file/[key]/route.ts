@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         let response;
         try {
             response = await getR2Client().send(command);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
             // Fallback to private bucket if public fails
             bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
@@ -56,6 +57,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             headers.set("Content-Disposition", `attachment; filename="${encodeURIComponent(filename)}"`);
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return new Response(response.Body as any, {
             status: 200,
             headers: headers,
@@ -65,4 +67,3 @@ export async function GET(request: NextRequest, { params }: Props) {
         return NextResponse.json({ error: "Failed to fetch file content" }, { status: 500 });
     }
 }
-export const runtime = 'edge';

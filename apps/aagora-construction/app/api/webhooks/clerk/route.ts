@@ -1,3 +1,4 @@
+/* eslint-disable turbo/no-undeclared-env-vars */
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
@@ -175,4 +176,3 @@ export async function POST(req: Request) {
 
     return new Response('', { status: 200 });
 }
-export const runtime = 'edge';

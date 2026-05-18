@@ -15,4 +15,3 @@ export default async function ProjectLayout({
         </div>
     );
 }
-export const runtime = 'edge';

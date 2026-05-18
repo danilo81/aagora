@@ -30,9 +30,9 @@ export async function DELETE(req: NextRequest) {
         await db.delete(libraryFile).where(eq(libraryFile.id, file.id));
 
         return NextResponse.json({ success: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error("Error in /api/r2/delete:", error);
         return NextResponse.json({ error: "Error interno" }, { status: 500 });
     }
 }
-export const runtime = 'edge';

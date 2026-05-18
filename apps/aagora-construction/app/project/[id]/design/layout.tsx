@@ -5,4 +5,3 @@ export default async function DesingLayout({ children, params }: { children: Rea
     await checkModuleAccess(id, 'design');
     return <>{children}</>;
 }
-export const runtime = 'edge';

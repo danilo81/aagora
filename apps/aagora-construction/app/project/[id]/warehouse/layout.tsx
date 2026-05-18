@@ -5,4 +5,3 @@ export default async function WarehouseLayout({ children, params }: { children: 
     await checkModuleAccess(id, 'warehouse');
     return <>{children}</>;
 }
-export const runtime = 'edge';

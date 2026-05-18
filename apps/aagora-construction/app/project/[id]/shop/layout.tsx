@@ -5,4 +5,3 @@ export default async function ShopLayout({ children, params }: { children: React
     await checkModuleAccess(id, 'shop');
     return <>{children}</>;
 }
-export const runtime = 'edge';
