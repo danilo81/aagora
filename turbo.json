@@ -27,8 +27,15 @@
         ".open-next/**"
       ]
     },
+    "@workspace/auth#build": {
+      "outputs": [
+        "dist/**"
+      ]
+    },
     "@workspace/db#build": {
-      "outputs": []
+      "outputs": [
+        "dist/**"
+      ]
     },
     "lint": {
       "dependsOn": [

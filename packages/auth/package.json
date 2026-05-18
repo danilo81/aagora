@@ -3,12 +3,12 @@
   "type": "module",
   "exports": {
     "./server": {
-      "types": "./src/server.d.ts",
-      "default": "./src/server.js"
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
     },
     "./client": {
-      "types": "./src/client.d.ts",
-      "default": "./src/client.js"
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
     }
   },
   "scripts": {
