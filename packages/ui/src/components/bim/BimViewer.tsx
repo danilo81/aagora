@@ -1,7 +1,7 @@
-﻿"use client"
+"use client"
 import React, { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { Canvas, useThree, ThreeEvent } from '@react-three/fiber';
-import { OrbitControls, Environment, ContactShadows, Grid, GizmoHelper, GizmoViewport, TransformControls, OrthographicCamera, PerspectiveCamera, Line, Html } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Grid, GizmoHelper, GizmoViewport, TransformControls, OrthographicCamera, PerspectiveCamera, Line, Html } from '@react-three/drei';
 import * as THREE from 'three';
 interface OrbitControlsImpl { target: THREE.Vector3; update(): void; enabled: boolean; }
 import { BuildingModel } from './BuildingModel';
@@ -144,16 +144,25 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
       // Check proximity to first point
       if (currentPoints.length >= 2) {
         const firstPoint = currentPoints[0];
-        const distance = firstPoint.distanceTo(point);
-        if (distance < 0.5) { // Threshold
-          // Close and finalize
-          if (onAddPolyline) onAddPolyline([...currentPoints, firstPoint].map(p => [p.x, p.y, p.z]));
-          setPolylinePoints([]);
-          polylinePointsRef.current = [];
-          setCurrentPoint(null);
-          setSnapType(null);
-          if (setActiveTool) setActiveTool(null);
-          return;
+        if (firstPoint) {
+          const distance = firstPoint.distanceTo(point);
+          if (distance < 0.5) { // Threshold
+            // Close and finalize
+            if (onAddPolyline) {
+              onAddPolyline([...currentPoints, firstPoint].map(p => {
+                const x = p?.x ?? 0;
+                const y = p?.y ?? 0;
+                const z = p?.z ?? 0;
+                return [x, y, z];
+              }));
+            }
+            setPolylinePoints([]);
+            polylinePointsRef.current = [];
+            setCurrentPoint(null);
+            setSnapType(null);
+            if (setActiveTool) setActiveTool(null);
+            return;
+          }
         }
       }
       const newPoints = [...currentPoints, point];
@@ -164,29 +173,36 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
       // Check proximity to first point
       if (currentPoints.length >= 2) {
         const firstPoint = currentPoints[0];
-        const distance = firstPoint.distanceTo(point);
-        if (distance < 0.5) { // Threshold
-          // Close and finalize
-          if (onAddSlab && setActiveTool) {
-            let thickness = 0.15;
-            let elevation = planeY;
-            if (activeSlabTypeId && slabTypes) {
-              const slabType = slabTypes.find(st => st.id === activeSlabTypeId);
-              if (slabType) {
-                thickness = slabType.totalThickness;
-                if (slabType.datum === 'bottom') {
-                  elevation = planeY + thickness;
+        if (firstPoint) {
+          const distance = firstPoint.distanceTo(point);
+          if (distance < 0.5) { // Threshold
+            // Close and finalize
+            if (onAddSlab && setActiveTool) {
+              let thickness = 0.15;
+              let elevation = planeY;
+              if (activeSlabTypeId && slabTypes) {
+                const slabType = slabTypes.find(st => st.id === activeSlabTypeId);
+                if (slabType) {
+                  thickness = slabType.totalThickness;
+                  if (slabType.datum === 'bottom') {
+                    elevation = planeY + thickness;
+                  }
                 }
               }
+              onAddSlab([...currentPoints, firstPoint].map(p => {
+                const x = p?.x ?? 0;
+                const y = p?.y ?? 0;
+                const z = p?.z ?? 0;
+                return [x, y, z];
+              }), thickness, elevation);
             }
-            onAddSlab([...currentPoints, firstPoint].map(p => [p.x, p.y, p.z]), thickness, elevation);
+            setSlabPoints([]);
+            slabPointsRef.current = [];
+            setCurrentPoint(null);
+            setSnapType(null);
+            if (setActiveTool) setActiveTool(null);
+            return;
           }
-          setSlabPoints([]);
-          slabPointsRef.current = [];
-          setCurrentPoint(null);
-          setSnapType(null);
-          if (setActiveTool) setActiveTool(null);
-          return;
         }
       }
       const newPoints = [...currentPoints, point];
@@ -329,9 +345,16 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
         const finalPoints = [...lastPoints, point];
 
         // Cerrar el perÃ­metro si no estÃ¡ cerrado
-        const closedPoints = [...polylinePointsRef.current, polylinePointsRef.current[0]];
-
-        onAddPolyline(closedPoints.map(p => [p.x, p.y, p.z]));
+        const firstPt = polylinePointsRef.current[0];
+        if (firstPt) {
+          const closedPoints = [...polylinePointsRef.current, firstPt];
+          onAddPolyline(closedPoints.map(p => {
+            const x = p?.x ?? 0;
+            const y = p?.y ?? 0;
+            const z = p?.z ?? 0;
+            return [x, y, z];
+          }));
+        }
         setPolylinePoints([]);
         polylinePointsRef.current = [];
         setCurrentPoint(null);
@@ -353,9 +376,16 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
         }
 
         // Cerrar el perÃ­metro
-        const closedPoints = [...slabPointsRef.current, slabPointsRef.current[0]];
-
-        onAddSlab(closedPoints.map(p => [p.x, p.y, p.z]), thickness, elevation);
+        const firstPt = slabPointsRef.current[0];
+        if (firstPt) {
+          const closedPoints = [...slabPointsRef.current, firstPt];
+          onAddSlab(closedPoints.map(p => {
+            const x = p?.x ?? 0;
+            const y = p?.y ?? 0;
+            const z = p?.z ?? 0;
+            return [x, y, z];
+          }), thickness, elevation);
+        }
         setSlabPoints([]);
         slabPointsRef.current = [];
         setCurrentPoint(null);
@@ -623,10 +653,10 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
           )}
 
           {/* Draw current drawing segment */}
-          {currentPoint && (
+          {currentPoint && polylinePoints[polylinePoints.length - 1] && (
             <group>
               <Line
-                points={[polylinePoints[polylinePoints.length - 1], currentPoint]}
+                points={[polylinePoints[polylinePoints.length - 1] as THREE.Vector3, currentPoint]}
                 color="#3b82f6"
                 lineWidth={2}
                 dashed
@@ -637,7 +667,7 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
                 <div className="bg-zinc-900/95 backdrop-blur-md border border-blue-500/50 text-zinc-300 px-2.5 py-2 rounded shadow-xl flex flex-col gap-1.5 font-mono text-[11px] select-none min-w-[120px]">
                   <div className="flex justify-between items-center gap-4">
                     <span className="text-zinc-500 font-medium">Length</span>
-                    <span className="text-blue-400 font-semibold">{polylinePoints[polylinePoints.length - 1].distanceTo(currentPoint).toFixed(precision)}m</span>
+                    <span className="text-blue-400 font-semibold">{(polylinePoints[polylinePoints.length - 1]?.distanceTo(currentPoint) ?? 0).toFixed(precision)}m</span>
                   </div>
                   <div className="w-full h-px bg-zinc-800 my-0.5"></div>
                   <div className="text-center text-zinc-500 text-[9px] mt-1">Double-click to finish</div>
@@ -661,10 +691,10 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
           )}
 
           {/* Draw current drawing segment */}
-          {currentPoint && (
+          {currentPoint && slabPoints[slabPoints.length - 1] && (
             <group>
               <Line
-                points={[slabPoints[slabPoints.length - 1], currentPoint]}
+                points={[slabPoints[slabPoints.length - 1] as THREE.Vector3, currentPoint]}
                 color="#10b981"
                 lineWidth={2}
                 dashed
@@ -675,7 +705,7 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
                 <div className="bg-zinc-900/95 backdrop-blur-md border border-emerald-500/50 text-zinc-300 px-2.5 py-2 rounded shadow-xl flex flex-col gap-1.5 font-mono text-[11px] select-none min-w-[120px]">
                   <div className="flex justify-between items-center gap-4">
                     <span className="text-zinc-500 font-medium">Length</span>
-                    <span className="text-emerald-400 font-semibold">{slabPoints[slabPoints.length - 1].distanceTo(currentPoint).toFixed(precision)}m</span>
+                    <span className="text-emerald-400 font-semibold">{(slabPoints[slabPoints.length - 1]?.distanceTo(currentPoint) ?? 0).toFixed(precision)}m</span>
                   </div>
                   <div className="w-full h-px bg-zinc-800 my-0.5"></div>
                   <div className="text-center text-zinc-500 text-[9px] mt-1">Click first point or Double-click to finish</div>
@@ -699,10 +729,10 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
           )}
 
           {/* Draw current drawing segment */}
-          {currentPoint && (
+          {currentPoint && wallPoints[wallPoints.length - 1] && (
             <group>
               <Line
-                points={[wallPoints[wallPoints.length - 1], currentPoint]}
+                points={[wallPoints[wallPoints.length - 1] as THREE.Vector3, currentPoint]}
                 color="#a855f7"
                 lineWidth={3}
                 dashed
@@ -752,10 +782,10 @@ function DrawingPlane({ activeTool, onAddLine, setActiveTool, lineConfig, onAddR
           )}
 
           {/* Draw current drawing segment */}
-          {currentPoint && (
+          {currentPoint && arcPoints[arcPoints.length - 1] && (
             <group>
               <Line
-                points={[arcPoints[arcPoints.length - 1], currentPoint]}
+                points={[arcPoints[arcPoints.length - 1] as THREE.Vector3, currentPoint]}
                 color="#ef4444"
                 lineWidth={2}
                 dashed
@@ -1123,6 +1153,7 @@ function IfcModelRenderer({ model, elements, selectedIds, onSelect, activeTool, 
 
   useEffect(() => {
     if (modelElements.length > 0) {
+      // eslint-disable-next-line react-hooks/immutability
       model.visible = false;
       
       // Exclude selected element OR any element with a transform so they can be rendered individually
@@ -1186,6 +1217,7 @@ function IfcModelRenderer({ model, elements, selectedIds, onSelect, activeTool, 
         setXraySubset(null);
       }
     } else {
+      // eslint-disable-next-line react-hooks/immutability
       model.visible = true;
     }
   }, [model, modelElements, selectedIds, renderMode]);
@@ -1343,14 +1375,23 @@ function IfcMappedHighlighter({ mappedElements = [], activeAssignmentTarget, ifc
       if (isTransformed) return;
 
       const parts = m.elementId.split('-');
-      const modelID = parseInt(parts[1], 10);
-      const expressID = parseInt(parts[2], 10);
-      
-      const isActive = m.projectItemId === activeAssignmentTarget;
-      const targetMap = isActive ? activeByModel : regularByModel;
+      const modelIDText = parts[1];
+      const expressIDText = parts[2];
+      if (modelIDText !== undefined && expressIDText !== undefined) {
+        const modelID = parseInt(modelIDText, 10);
+        const expressID = parseInt(expressIDText, 10);
+        
+        const isActive = m.projectItemId === activeAssignmentTarget;
+        const targetMap = isActive ? activeByModel : regularByModel;
 
-      if (!targetMap[modelID]) targetMap[modelID] = [];
-      targetMap[modelID].push(expressID);
+        if (!targetMap[modelID]) {
+          targetMap[modelID] = [];
+        }
+        const arr = targetMap[modelID];
+        if (arr) {
+          arr.push(expressID);
+        }
+      }
     });
 
     // Create subsets
@@ -1358,10 +1399,11 @@ function IfcMappedHighlighter({ mappedElements = [], activeAssignmentTarget, ifc
       Object.keys(byModel).forEach(modelIDStr => {
         const modelID = parseInt(modelIDStr, 10);
         const model = ifcModels.find((m: any) => m.modelID === modelID);
-        if (model) {
+        const ids = byModel[modelID];
+        if (model && ids) {
           ifcLoader.ifcManager.createSubset({
             modelID,
-            ids: byModel[modelID],
+            ids,
             material: material,
             scene: groupRef.current!,
             removePrevious: true
@@ -1390,20 +1432,24 @@ function IfcMappedHighlighter({ mappedElements = [], activeAssignmentTarget, ifc
         
         if (isTransformed && el) {
           const parts = el.id.split('-');
-          const isActive = m.projectItemId === activeAssignmentTarget;
-          return (
-            <IfcIndividualSubset
-              key={`mapped-highlight-${el.id}`}
-              modelID={parseInt(parts[1], 10)}
-              expressID={parseInt(parts[2], 10)}
-              elementId={el.id}
-              position={el.geometry.position}
-              rotation={el.geometry.rotation}
-              scale={el.geometry.scale}
-              material={isActive ? activeMappedMaterial : mappedMaterial}
-              customID={`mapped-highlight-${el.id}`}
-            />
-          );
+          const modelIDText = parts[1];
+          const expressIDText = parts[2];
+          if (modelIDText !== undefined && expressIDText !== undefined) {
+            const isActive = m.projectItemId === activeAssignmentTarget;
+            return (
+              <IfcIndividualSubset
+                key={`mapped-highlight-${el.id}`}
+                modelID={parseInt(modelIDText, 10)}
+                expressID={parseInt(expressIDText, 10)}
+                elementId={el.id}
+                position={el.geometry.position}
+                rotation={el.geometry.rotation}
+                scale={el.geometry.scale}
+                material={isActive ? activeMappedMaterial : mappedMaterial}
+                customID={`mapped-highlight-${el.id}`}
+              />
+            );
+          }
         }
         return null;
       })}
@@ -1433,19 +1479,29 @@ function IfcHighlighter({ selectedIds, ifcModels, elements }: { selectedIds: str
       if (isTransformed) return;
 
       const parts = id.split('-');
-      const modelID = parseInt(parts[1], 10);
-      const expressID = parseInt(parts[2], 10);
-      if (!byModel[modelID]) byModel[modelID] = [];
-      byModel[modelID].push(expressID);
+      const modelIDText = parts[1];
+      const expressIDText = parts[2];
+      if (modelIDText !== undefined && expressIDText !== undefined) {
+        const modelID = parseInt(modelIDText, 10);
+        const expressID = parseInt(expressIDText, 10);
+        if (!byModel[modelID]) {
+          byModel[modelID] = [];
+        }
+        const arr = byModel[modelID];
+        if (arr) {
+          arr.push(expressID);
+        }
+      }
     });
 
     Object.keys(byModel).forEach(modelIDStr => {
       const modelID = parseInt(modelIDStr, 10);
       const model = ifcModels.find((m: any) => m.modelID === modelID);
-      if (model) {
+      const ids = byModel[modelID];
+      if (model && ids) {
         ifcLoader.ifcManager.createSubset({
           modelID,
-          ids: byModel[modelID],
+          ids,
           material: highlightMaterial,
           scene: groupRef.current!,
           removePrevious: true
@@ -1469,19 +1525,23 @@ function IfcHighlighter({ selectedIds, ifcModels, elements }: { selectedIds: str
         
         if (isTransformed && el) {
           const parts = el.id.split('-');
-          return (
-            <IfcIndividualSubset
-              key={`selection-highlight-${el.id}`}
-              modelID={parseInt(parts[1], 10)}
-              expressID={parseInt(parts[2], 10)}
-              elementId={el.id}
-              position={el.geometry.position}
-              rotation={el.geometry.rotation}
-              scale={el.geometry.scale}
-              material={highlightMaterial}
-              customID={`selection-highlight-${el.id}`}
-            />
-          );
+          const modelIDText = parts[1];
+          const expressIDText = parts[2];
+          if (modelIDText !== undefined && expressIDText !== undefined) {
+            return (
+              <IfcIndividualSubset
+                key={`selection-highlight-${el.id}`}
+                modelID={parseInt(modelIDText, 10)}
+                expressID={parseInt(expressIDText, 10)}
+                elementId={el.id}
+                position={el.geometry.position}
+                rotation={el.geometry.rotation}
+                scale={el.geometry.scale}
+                material={highlightMaterial}
+                customID={`selection-highlight-${el.id}`}
+              />
+            );
+          }
         }
         return null;
       })}

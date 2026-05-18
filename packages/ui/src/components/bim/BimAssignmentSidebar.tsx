@@ -1,12 +1,21 @@
-﻿"use client"
+"use client"
 import React, { useState, useMemo } from 'react';
-import { Layers, Box, Info, X, Tag, Calculator, CheckCircle2 } from 'lucide-react';
+import { Box, X, Tag, Calculator, CheckCircle2 } from 'lucide-react';
 import { ScrollArea } from '../scroll-area';
-import { Button } from '../button';
+
+interface ProjectItem {
+  id: string;
+  quantity: number;
+  item: {
+    description: string;
+    chapter: string;
+    unit: string;
+  };
+}
 
 interface BimAssignmentSidebarProps {
   onClose: () => void;
-  projectItems: any[];
+  projectItems: ProjectItem[];
   mappedElements: { elementId: string; projectItemId: string; quantity: number }[];
   activeAssignmentTarget: string | null;
   onSelectTarget: (projectItemId: string | null) => void;

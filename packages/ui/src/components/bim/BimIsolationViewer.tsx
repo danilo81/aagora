@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, ContactShadows, Grid } from '@react-three/drei';
+import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import { ifcLoader } from '../../lib/ifc';
 import { fetchIfcWithCache } from '../../lib/ifc-cache';
@@ -28,18 +28,29 @@ const highlightMaterial = new THREE.MeshStandardMaterial({
     side: THREE.DoubleSide
 });
 
+interface SpatialNode {
+    expressID?: number;
+    children?: SpatialNode[];
+}
+
 function IsolationEngine({ ifcUrl, targetElementIds, onLoadState, showXray = true }: BimIsolationViewerProps) {
-    const { scene, camera } = useThree();
-    const [originalModel, setOriginalModel] = useState<any>(null);
+    const { camera } = useThree();
+    const [originalModel, setOriginalModel] = useState<THREE.Object3D | null>(null);
     const [xraySubset, setXraySubset] = useState<THREE.Mesh | null>(null);
     const [highlightSubset, setHighlightSubset] = useState<THREE.Mesh | null>(null);
 
     // Initial load process
     useEffect(() => {
         let isMounted = true;
-        setOriginalModel(null);
-        setXraySubset(null);
-        setHighlightSubset(null);
+        
+        // Reset state asynchronously to avoid calling setState synchronously within the effect body
+        Promise.resolve().then(() => {
+            if (isMounted) {
+                setOriginalModel(null);
+                setXraySubset(null);
+                setHighlightSubset(null);
+            }
+        });
 
         const loadModel = async () => {
             try {
@@ -87,10 +98,19 @@ function IsolationEngine({ ifcUrl, targetElementIds, onLoadState, showXray = tru
                 targetElementIds.forEach(idText => {
                     const parts = idText.split('-');
                     if (parts.length >= 3) {
-                        const modelId = parseInt(parts[1], 10);
-                        const expressId = parseInt(parts[2], 10);
-                        if (!expressIdsByModel[modelId]) expressIdsByModel[modelId] = [];
-                        expressIdsByModel[modelId].push(expressId);
+                        const modelIdText = parts[1];
+                        const expressIdText = parts[2];
+                        if (modelIdText !== undefined && expressIdText !== undefined) {
+                            const modelId = parseInt(modelIdText, 10);
+                            const expressId = parseInt(expressIdText, 10);
+                            if (!expressIdsByModel[modelId]) {
+                                expressIdsByModel[modelId] = [];
+                            }
+                            const arr = expressIdsByModel[modelId];
+                            if (arr) {
+                                arr.push(expressId);
+                            }
+                        }
                     }
                 });
 
@@ -101,7 +121,7 @@ function IsolationEngine({ ifcUrl, targetElementIds, onLoadState, showXray = tru
                 const allSpatialTree = await ifcLoader.ifcManager.getSpatialStructure(model.modelID);
 
                 const allIds: number[] = [];
-                const extractIds = (node: any) => {
+                const extractIds = (node: SpatialNode) => {
                     if (node.expressID) allIds.push(node.expressID);
                     if (node.children) {
                         node.children.forEach(extractIds);
@@ -159,7 +179,7 @@ function IsolationEngine({ ifcUrl, targetElementIds, onLoadState, showXray = tru
         return () => {
             isMounted = false;
         };
-    }, [ifcUrl, targetElementIds, camera]);
+    }, [ifcUrl, targetElementIds, camera, onLoadState]);
 
     return (
         <group>

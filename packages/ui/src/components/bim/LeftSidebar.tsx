@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Camera, Building2, Plus, ChevronDown, ChevronRight, Box, Sun, Settings, Layers, Square, Cylinder, PanelLeftClose, PanelLeftOpen, Eye, EyeOff, Scan, Folder, FolderOpen, Component, GripVertical, Minus, Library, AppWindow, DoorOpen, Type, Trash2, MessageSquare } from 'lucide-react';
 import { BimElement, BimClass, WallType, LineType, Level, ScaleSettings, SlabType, SavedView, IssueNote } from '../../types/types';
@@ -156,20 +156,22 @@ export function LeftSidebar({ elements, selectedId, onSelect, onUpdateElement, b
         const targetItem = newClasses[targetIndex];
         const [sourceClass] = newClasses.splice(sourceIndex, 1);
 
-        // Recalculate target index after splice
-        const newTargetIndex = newClasses.findIndex(c => c.id === targetClassId);
+        if (sourceClass && targetItem) {
+          // Recalculate target index after splice
+          const newTargetIndex = newClasses.findIndex(c => c.id === targetClassId);
 
-        // If holding shift, make it a child, otherwise just reorder and adopt parent
-        if (e.shiftKey) {
-          sourceClass.parentId = targetClassId;
-          newClasses.splice(newTargetIndex + 1, 0, sourceClass);
-          setExpandedClasses(prev => prev.includes(targetClassId) ? prev : [...prev, targetClassId]);
-        } else {
-          sourceClass.parentId = targetItem.parentId;
-          newClasses.splice(newTargetIndex, 0, sourceClass);
+          // If holding shift, make it a child, otherwise just reorder and adopt parent
+          if (e.shiftKey) {
+            sourceClass.parentId = targetClassId;
+            newClasses.splice(newTargetIndex + 1, 0, sourceClass);
+            setExpandedClasses(prev => prev.includes(targetClassId) ? prev : [...prev, targetClassId]);
+          } else {
+            sourceClass.parentId = targetItem.parentId;
+            newClasses.splice(newTargetIndex, 0, sourceClass);
+          }
+
+          onReorderBimClasses(newClasses);
         }
-
-        onReorderBimClasses(newClasses);
       }
     }
     setDraggedClass(null);

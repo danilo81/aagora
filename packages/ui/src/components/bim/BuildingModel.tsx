@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import React, { useState, useMemo } from 'react';
 import { useCursor, Line } from '@react-three/drei';
 import { ThreeEvent } from '@react-three/fiber';
@@ -195,8 +195,8 @@ function BimMesh({
         lineColor = element.lineColor || customType.color;
         if (customType.segmentation && customType.segmentation.length > 0) {
           isDashed = true;
-          dashSize = customType.segmentation[0] || 0.5;
-          gapSize = customType.segmentation.length > 1 ? customType.segmentation[1] : dashSize;
+          dashSize = customType.segmentation[0] ?? 0.5;
+          gapSize = customType.segmentation.length > 1 ? (customType.segmentation[1] ?? dashSize) : dashSize;
         }
       }
     }
@@ -294,11 +294,17 @@ function BimMesh({
 
     const shape = new THREE.Shape();
     if (points.length > 0) {
-      shape.moveTo(points[0].x, points[0].z);
-      for (let i = 1; i < points.length; i++) {
-        shape.lineTo(points[i].x, points[i].z);
+      const p0 = points[0];
+      if (p0) {
+        shape.moveTo(p0.x, p0.z);
+        for (let i = 1; i < points.length; i++) {
+          const pi = points[i];
+          if (pi) {
+            shape.lineTo(pi.x, pi.z);
+          }
+        }
+        shape.lineTo(p0.x, p0.z);
       }
-      shape.lineTo(points[0].x, points[0].z);
     }
 
     const { isDashed, dashSize, gapSize, lineWidth, lineColor } = getLineProps();
@@ -331,7 +337,10 @@ function BimMesh({
           />
         </mesh>
         <Line
-          points={[...points.map(p => [p.x, p.y, p.z] as [number, number, number]), [points[0].x, points[0].y, points[0].z]]}
+          points={[
+            ...points.map(p => [p.x, p.y, p.z] as [number, number, number]),
+            [points[0]?.x ?? 0, points[0]?.y ?? 0, points[0]?.z ?? 0]
+          ]}
           color={isSelected ? '#3b82f6' : (hovered ? highlightColor : (isMapped ? '#10b981' : lineColor))}
           lineWidth={lineWidth}
           transparent={transparent}

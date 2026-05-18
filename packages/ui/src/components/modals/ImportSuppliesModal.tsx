@@ -13,15 +13,21 @@ import { Input } from '@workspace/ui/components/input';
 import { Download, Upload, CheckCircle2, FileSpreadsheet, Loader2, ArrowRight, ArrowLeft, AlertTriangle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@workspace/ui/hooks/use-toast';
-import { importSuppliesBatch } from '../../../../../apps/aagora-core/actions';
 import { ScrollArea } from '@workspace/ui/components/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@workspace/ui/components/table';
 import { cn } from '@workspace/ui/lib/utils';
 import { Badge } from '@workspace/ui/components/badge';
 import { SheetDescription } from '@workspace/ui/components/sheet';
 
-// NUEVO: Añadimos dbUnits a los props
-export function ImportExportSupplies({ currentData, dbUnits = [] }: { currentData?: any[], dbUnits?: any[] }) {
+export function ImportExportSupplies({ 
+    currentData, 
+    dbUnits = [],
+    onImportSuppliesBatch
+}: { 
+    currentData?: any[], 
+    dbUnits?: any[],
+    onImportSuppliesBatch?: (data: any[]) => Promise<{ success: boolean; count?: number; error?: string }>
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const [step, setStep] = useState(1);
     const [previewData, setPreviewData] = useState<any[]>([]);
@@ -139,7 +145,10 @@ export function ImportExportSupplies({ currentData, dbUnits = [] }: { currentDat
         setIsUploading(true);
 
         try {
-            const res = await importSuppliesBatch(previewData);
+            if (!onImportSuppliesBatch) {
+                throw new Error("El cargador de insumos no está configurado.");
+            }
+            const res = await onImportSuppliesBatch(previewData);
             if (res.success) {
                 toast({ title: "¡Importación Exitosa!", description: `Se añadieron ${res.count} insumos.` });
                 setIsOpen(false);

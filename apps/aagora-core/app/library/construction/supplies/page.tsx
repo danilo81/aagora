@@ -72,7 +72,8 @@ import {
     getContacts,
     createContact,
     getUnits,
-    getSuppliesLibraryPaginated
+    getSuppliesLibraryPaginated,
+    importSuppliesBatch
 } from '@/actions';
 import { Badge } from '@workspace/ui/components/badge';
 import { Tabs, TabsList, TabsTrigger } from '@workspace/ui/components/tabs';
@@ -533,7 +534,7 @@ export default function SuppliesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <ImportExportSupplies currentData={filteredSupplies} dbUnits={dbUnits} />
+                    <ImportExportSupplies currentData={filteredSupplies} dbUnits={dbUnits} onImportSuppliesBatch={importSuppliesBatch} />
                     <Dialog open={isDialogOpen} onOpenChange={(open) => {
                         setIsDialogOpen(open);
                         if (!open) resetForm();
