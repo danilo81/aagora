@@ -1,7 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { ratelimit } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { getAppUrl } from "@workspace/ui/lib/utils";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const isPublicRoute = createRouteMatcher([
     "/sign-in(.*)",
@@ -16,27 +17,34 @@ const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 const isCallbackRoute = createRouteMatcher(["/auth/callback(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
-    // Implement Rate Limiting if Upstash is configured
-    if (ratelimit) {
-        const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "127.0.0.1";
-        const { success, limit, reset, remaining } = await ratelimit.limit(ip);
-        
-        if (!success) {
-            return new NextResponse("Too Many Requests - Rate limit exceeded", {
-                status: 429,
-                headers: {
-                    "X-RateLimit-Limit": limit.toString(),
-                    "X-RateLimit-Remaining": remaining.toString(),
-                    "X-RateLimit-Reset": reset.toString(),
-                },
-            });
-        }
+    // Rate Limiting via Workers KV (zero-dependency, no Upstash needed)
+    let kv: Parameters<typeof checkRateLimit>[0] = null;
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ctx = (await getCloudflareContext()) as any;
+        kv = ctx.env?.RATE_LIMIT_KV ?? null;
+    } catch {
+        // En dev local getCloudflareContext puede no estar disponible → kv = null → skip
+    }
+
+    const ip = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip") ?? "127.0.0.1";
+    const { success, limit, reset, remaining } = await checkRateLimit(kv, ip);
+
+    if (!success) {
+        return new NextResponse("Too Many Requests - Rate limit exceeded", {
+            status: 429,
+            headers: {
+                "X-RateLimit-Limit": limit.toString(),
+                "X-RateLimit-Remaining": remaining.toString(),
+                "X-RateLimit-Reset": reset.toString(),
+            },
+        });
     }
 
     const { userId, sessionClaims } = await auth();
     const metadata = sessionClaims?.publicMetadata as Record<string, unknown> | undefined;
     const accountType = metadata?.accountType as string | undefined;
-    
+
     // Get host header to dynamically resolve the redirect URL if running on Vercel/Cloudflare
     const host = request.headers.get("host") || undefined;
 
@@ -68,10 +76,6 @@ export default clerkMiddleware(async (auth, request) => {
     if (!userId) {
         return NextResponse.redirect(new URL("/login", request.url));
     }
-
-    // Admin routes: role check is deferred to the layout (uses currentUser() for
-    // fresh Clerk metadata — avoids JWT caching issues). Middleware only verifies
-    // that the session is authenticated (userId check above covers that).
 
     if (accountType === "proveedor") {
         return NextResponse.redirect(getAppUrl("community", host));

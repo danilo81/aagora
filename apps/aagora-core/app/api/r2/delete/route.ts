@@ -1,10 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "@workspace/db";
 import { libraryFile } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { getS3Client } from "@/lib/s3-client";
+import { deleteR2Object } from "@/lib/r2-native";
 
 export async function DELETE(req: NextRequest) {
     try {
@@ -22,10 +21,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: "Archivo no encontrado o sin permisos" }, { status: 404 });
         }
 
-        await getS3Client().send(new DeleteObjectCommand({
-            Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,
-            Key: key,
-        }));
+        await deleteR2Object(key, false);
 
         await db.delete(libraryFile).where(eq(libraryFile.id, file.id));
 

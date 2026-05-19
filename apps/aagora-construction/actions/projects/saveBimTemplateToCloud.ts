@@ -5,8 +5,6 @@ import { eq } from 'drizzle-orm';
 import { getAuthUserId } from '@/lib/clerk-auth';
 import { getR2Client } from "@/lib/r2Client";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { v4 as uuidv4 } from "uuid";
-
 function constructPublicUrl(key: string): string {
     const publicUrlEnv = process.env.R2_PUBLIC_URL_PUBLIC || process.env.R2_PUBLIC_URL;
     const base = publicUrlEnv || process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
@@ -43,7 +41,7 @@ export async function saveBimTemplateToCloud(projectId: string, templateName: st
         const jsonContent = JSON.stringify(topicsData);
         const buffer = Buffer.from(jsonContent, 'utf-8');
 
-        const uniqueKey = `${uuidv4()}-bim-template.json`;
+        const uniqueKey = `${crypto.randomUUID()}-bim-template.json`;
         const bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME_PUBLIC || process.env.CLOUDFLARE_R2_BUCKET_NAME;
 
         const command = new PutObjectCommand({

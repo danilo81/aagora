@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import * as THREE from 'three';
 import { ifcLoader } from '@/lib/ifc';
-import { BimViewer } from '@workspace/ui/components/bim/BimViewer';
+import dynamic from 'next/dynamic';
 import { Sidebar } from '@workspace/ui/components/bim/Sidebar';
 import { LeftSidebar } from '@workspace/ui/components/bim/LeftSidebar';
 import { Toolbar } from '@workspace/ui/components/bim/Toolbar';
@@ -16,11 +16,22 @@ import { IfcCloudModal } from '@workspace/ui/components/bim/IfcCloudModal';
 import { getProjectDocuments, getProjectById, createBimIssue, assignElementToItem, getMappedElements, removeElementMapping } from '@/actions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@workspace/ui/components/dialog';
 import { Button } from '@workspace/ui/components/button';
-import { Box, Layers } from 'lucide-react';
+import { Box, Layers, Loader2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { BimAssignmentSidebar } from '@workspace/ui/components/bim/BimAssignmentSidebar';
 import { useToast } from '@/hooks/use-toast';
+
+// Dynamic import for the BIM viewer with SSR disabled to avoid hydration/initialization errors
+const BimViewer = dynamic(() => import('@workspace/ui/components/bim/BimViewer').then(mod => mod.BimViewer), {
+    ssr: false,
+    loading: () => (
+        <div className="flex flex-col items-center justify-center h-full w-full bg-[#050505] gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Inicializando Entorno BIM...</p>
+        </div>
+    )
+});
 
 export default function ProjectDesignPage() {
     const params = useParams();

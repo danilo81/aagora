@@ -34,7 +34,7 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  transpilePackages: ["@workspace/ui", "@workspace/db", "@workspace/auth"],
+  transpilePackages: ["@workspace/ui", "@workspace/db"],
   experimental: {
     serverActions: {
       bodySizeLimit: '6mb',

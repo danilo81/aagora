@@ -6,7 +6,6 @@ import { getR2Client } from "@/lib/r2Client";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getAuthUserId } from "@/lib/clerk-auth";
 import { lexicalToHtml } from "@/lib/lexical-html";
-import { v4 as uuidv4 } from "uuid";
 import { BimTopic } from "@/types/types";
 import { PDFDocument, StandardFonts, rgb, PageSizes } from 'pdf-lib';
 
@@ -178,7 +177,7 @@ export async function exportTopicToPDF(
         const pdfBytes = await generatePDF(topicTree, "Usuario Aagora");
 
         const filename = `${topicTree.title.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pdf`;
-        const uniqueKey = `pdf_exports/${uuidv4()}_${filename}`;
+        const uniqueKey = `pdf_exports/${crypto.randomUUID()}_${filename}`;
 
         await getR2Client().send(new PutObjectCommand({
             Bucket: process.env.CLOUDFLARE_R2_BUCKET_NAME!,

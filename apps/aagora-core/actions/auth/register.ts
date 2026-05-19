@@ -2,7 +2,7 @@
 
 import { db, user } from '@workspace/db';
 import { eq, sql } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/crypto';
 import { cookies } from 'next/headers';
 
 function isStrongPassword(password: string): boolean {
@@ -53,7 +53,7 @@ export async function register(data: { name?: string | null; email: string; pass
 
         const role = 'viewer';
 
-        const hashedPassword = await bcrypt.hash(data.password, 10);
+        const hashedPassword = await hashPassword(data.password);
 
         const [newUser] = await db.insert(user).values({
             name: data.name || "",

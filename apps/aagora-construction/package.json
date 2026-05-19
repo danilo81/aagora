@@ -10,10 +10,8 @@
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts"
+    "deploy": "vercel --prod",
+    "preview": "vercel"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.740.0",
@@ -29,9 +27,9 @@
     "@lexical/rich-text": "^0.44.0",
     "@lexical/selection": "^0.44.0",
     "@lexical/utils": "^0.44.0",
-    "@opennextjs/cloudflare": "^1.19.1",
+
     "@types/three": "^0.184.1",
-    "@workspace/auth": "workspace:*",
+
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
     "clsx": "^2.1.1",
@@ -47,19 +45,18 @@
     "tailwind-merge": "^3.5.0",
     "three": "^0.184.0",
     "pdf-lib": "^1.17.1",
-    "uuid": "^11.0.0",
     "web-ifc-three": "^0.0.126"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.1",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^25.1.0",
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
     "@workspace/eslint-config": "workspace:^",
     "@workspace/typescript-config": "workspace:*",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
-    "wrangler": "^4.87.0"
+    "vercel": "latest"
   }
 }

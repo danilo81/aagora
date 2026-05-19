@@ -9,7 +9,7 @@
       "@workspace/ui/*": ["../../packages/ui/src/*"],
       "@workspace/db": ["../../packages/db/src/index.ts"],
       "@workspace/db/*": ["../../packages/db/src/*"],
-      "@workspace/auth/*": ["../../packages/auth/src/*"]
+
     },
     "plugins": [
       {

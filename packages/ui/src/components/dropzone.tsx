@@ -12,8 +12,6 @@ import { useCallback, useEffect, useState } from "react";
 import type { FileRejection } from "react-dropzone";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
-
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent } from "@workspace/ui/components/card";
 import { cn } from "@workspace/ui/lib/utils";
@@ -227,7 +225,7 @@ export function Dropzone({
             setFiles((prevFiles) => [
                 ...prevFiles,
                 ...acceptedFiles.map((file) => ({
-                    id: uuidv4(),
+                    id: crypto.randomUUID(),
                     file,
                     uploading: false,
                     progress: 0,

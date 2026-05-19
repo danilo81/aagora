@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getR2Client } from "@/lib/r2Client";
+import { getR2Object } from "@/lib/r2-native";
 
 interface Props {
     params: Promise<{ key: string }>;
@@ -19,38 +18,27 @@ export async function GET(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: "File key is required" }, { status: 400 });
         }
 
-        // Try Public Bucket first for images/public assets
-        let bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME_PUBLIC || process.env.CLOUDFLARE_R2_BUCKET_NAME!;
-        let command = new GetObjectCommand({
-            Bucket: bucketName,
-            Key: keyToFetch,
-        });
-
-        let response;
-        try {
-            response = await getR2Client().send(command);
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (e) {
-            // Fallback to private bucket if public fails
-            bucketName = process.env.CLOUDFLARE_R2_BUCKET_NAME!;
-            command = new GetObjectCommand({
-                Bucket: bucketName,
-                Key: keyToFetch,
-            });
-            response = await getR2Client().send(command);
+        // Try Public Bucket first for images/public assets, fall back to private
+        let response = await getR2Object(keyToFetch, true);
+        if (!response) {
+            response = await getR2Object(keyToFetch, false);
         }
 
-        if (!response.Body) {
+        if (!response) {
+            return NextResponse.json({ error: "File not found" }, { status: 404 });
+        }
+
+        if (!response.body) {
             throw new Error("Empty body from R2");
         }
 
         // Return the body with correct Content-Type if possible
         const headers = new Headers();
-        if (response.ContentType) {
-            headers.set("Content-Type", response.ContentType);
+        if (response.contentType) {
+            headers.set("Content-Type", response.contentType);
         }
-        if (response.ContentLength) {
-            headers.set("Content-Length", response.ContentLength.toString());
+        if (response.contentLength) {
+            headers.set("Content-Length", response.contentLength.toString());
         }
 
         if (download) {
@@ -58,7 +46,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return new Response(response.Body as any, {
+        return new Response(response.body as any, {
             status: 200,
             headers: headers,
         });

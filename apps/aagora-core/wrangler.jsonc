@@ -26,17 +26,44 @@
 			// see https://opennext.js.org/cloudflare/caching
 			"binding": "WORKER_SELF_REFERENCE",
 			"service": "aagora-core"
+		},
+		{
+			// Service Binding hacia el Hono Worker de workspace API
+			// Elimina latencia HTTP y el double-verification de Clerk
+			"binding": "WORKSPACE_API",
+			"service": "aagora-workspace"
 		}
 	],
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
-	/**
-	 * Smart Placement (opcional)
-	 * https://developers.cloudflare.com/workers/configuration/smart-placement/
-	 */
-	// "placement": { "mode": "smart" }
+	"upload_source_maps": true,
+	"kv_namespaces": [
+		{
+			// Workers KV para rate-limiting (reemplaza Upstash Redis)
+			// Crear con: wrangler kv namespace create RATE_LIMIT_KV
+			"binding": "RATE_LIMIT_KV",
+			"id": "REPLACE_WITH_KV_NAMESPACE_ID",
+			"preview_id": "REPLACE_WITH_KV_PREVIEW_NAMESPACE_ID"
+		}
+	],
+	"r2_buckets": [
+		{
+			// Bucket R2 para OpenNext incremental cache (ISR/RSC)
+			// Crear con: wrangler r2 bucket create aagora-next-cache
+			"binding": "NEXT_CACHE_R2_BUCKET",
+			"bucket_name": "aagora-next-cache"
+		},
+		{
+			"binding": "AAGORA_ARCHIVOS",
+			"bucket_name": "aagora-archivos"
+		},
+		{
+			"binding": "AAGORA_PUBLIC",
+			"bucket_name": "aagora-public"
+		}
+	],
+	"placement": { "mode": "smart" },
 	/**
 	 * Variables de entorno NO sensibles (las sensibles van como Secrets):
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables

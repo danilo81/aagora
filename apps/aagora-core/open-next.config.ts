@@ -1,7 +1,15 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-// import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
+import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";
 
+/**
+ * R2 Incremental Cache activo.
+ *
+ * Requiere binding R2 en wrangler.jsonc:
+ *   { "binding": "NEXT_CACHE_R2_BUCKET", "bucket_name": "aagora-next-cache" }
+ *
+ * Crear el bucket si no existe:
+ *   wrangler r2 bucket create aagora-next-cache
+ */
 export default defineCloudflareConfig({
-	// Descomenta para habilitar caché incremental con R2 (recomendado para producción):
-	// incrementalCache: r2IncrementalCache,
+	incrementalCache: r2IncrementalCache,
 });

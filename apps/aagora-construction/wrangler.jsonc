@@ -23,5 +23,20 @@
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
+	"upload_source_maps": true,
+	"r2_buckets": [
+		{
+			"binding": "NEXT_CACHE_R2_BUCKET",
+			"bucket_name": "aagora-next-cache"
+		},
+		{
+			"binding": "AAGORA_ARCHIVOS",
+			"bucket_name": "aagora-archivos"
+		},
+		{
+			"binding": "AAGORA_PUBLIC",
+			"bucket_name": "aagora-public"
+		}
+	],
+	"placement": { "mode": "smart" }
 }

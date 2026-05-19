@@ -2,7 +2,7 @@
 
 import { db, user } from '@workspace/db';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { hashPassword } from '@/lib/crypto';
 import { requireAdmin } from '@/lib/clerk-auth';
 
 export async function createUser(data: {
@@ -24,7 +24,7 @@ export async function createUser(data: {
         const existing = await db.query.user.findFirst({ where: eq(user.email, data.email) });
         if (existing) return { error: 'Ya existe un usuario con este correo electrónico.' };
 
-        const hashedPassword = await bcrypt.hash(data.password, 10);
+        const hashedPassword = await hashPassword(data.password);
 
         const [newUser] = await db.insert(user).values({
             name: data.name || '',

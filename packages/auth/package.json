@@ -16,8 +16,6 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@workspace/db": "workspace:*",
-    "better-auth": "^1.6.2",
     "server-only": "^0.0.1"
   },
   "devDependencies": {

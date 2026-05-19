@@ -28,12 +28,17 @@
       "outputs": [
         ".next/**",
         "!.next/cache/**",
-        ".open-next/**"
+        ".open-next/**",
+        "dist/**"
       ]
     },
-    "@workspace/auth#build": {
+    "aagora-workspace#build": {
       "dependsOn": [
         "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".dev.vars"
       ],
       "outputs": [
         "dist/**"

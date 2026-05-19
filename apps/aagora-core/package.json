@@ -26,9 +26,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@opennextjs/cloudflare": "^1.19.1",
     "@types/lodash": "^4.17.24",
-    "@upstash/ratelimit": "^2.0.5",
-    "@upstash/redis": "^1.34.3",
-    "@workspace/auth": "workspace:*",
+
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
     "bcryptjs": "^3.0.3",

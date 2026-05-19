@@ -2,7 +2,7 @@
 
 import { db, user } from '@workspace/db';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcryptjs';
+import { verifyPassword, hashPassword, needsMigration } from '@/lib/crypto';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -42,10 +42,23 @@ export async function login(credentials: { email: string; password: string }): P
             return { success: false, error: 'Invalid email or password.' };
         }
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, existingUser.password);
+        const isPasswordValid = await verifyPassword(credentials.password, existingUser.password);
 
         if (!isPasswordValid) {
             return { success: false, error: 'Invalid email or password.' };
+        }
+
+        // Seamless legacy bcrypt -> native Web Crypto PBKDF2 migration
+        if (needsMigration(existingUser.password)) {
+            try {
+                const migratedHash = await hashPassword(credentials.password);
+                await db.update(user)
+                    .set({ password: migratedHash })
+                    .where(eq(user.id, existingUser.id));
+                console.log(`[Migration] User ${existingUser.id} password successfully upgraded to PBKDF2.`);
+            } catch (migrationError) {
+                console.error(`[Migration] Failed to migrate password for user ${existingUser.id}:`, migrationError);
+            }
         }
 
         const cookieStore = await cookies();
