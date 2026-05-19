@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 interface R2Bucket {
